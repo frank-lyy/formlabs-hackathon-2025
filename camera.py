@@ -1,3 +1,5 @@
+### This should be updated for the ZED2I camera ###
+
 import pyrealsense2 as rs
 import numpy as np
 # import open3d as o3d
