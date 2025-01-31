@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 
-def view_raw_depth(filename, width, height):
+def view_depth(filename, width, height):
     # Read the raw data
     depth_data = np.fromfile(filename, dtype=np.uint16)
     
@@ -17,7 +17,7 @@ def view_raw_depth(filename, width, height):
     plt.title('Depth Image')
     plt.show()
 
-def view_raw_color(filename, width, height):
+def view_color(filename, width, height):
     # Read data from png file
     color_data = plt.imread(filename)
     
@@ -43,25 +43,28 @@ def get_color(filename, width, height):
     
     return color_data
 
-def get_mask(filename, width, height):
+def get_mask(filename, width, height, remove_sides=False):
     color_data = get_color(filename, width, height)
 
     mask = np.zeros((height, width), dtype=np.bool_)
     mask[color_data[:, :, 0] < 50] = True  # Assuming RGB values
     
-    for i in range(0, 100):
-        mask[:, i] = False
+    # My poor heuristic that deletes the sides of the image from the mask 
+    # (in case some of those areas are dark)
+    if remove_sides:
+        for i in range(0, 20):
+            mask[:, i] = False
+            mask[:, width - i - 1] = False
+            mask[i, :] = False
+            mask[height - i - 1, :] = False
     
     # print(mask.shape)
     return mask
 
 if __name__ == "__main__":
-    # Update with your actual .raw file path
-    first_file = os.path.join('images', '1_Depth.raw')  # Assuming the raw file is in the images directory
     # view_raw_depth(first_file, width=424, height=240)
     image1 = get_color("images/1_Color.png", width=424, height=240)
     mask1 = get_mask("images/1_Color.png", width=424, height=240)
-    second_file = os.path.join('images', '2_Depth.raw')  # Assuming the raw file is in the images directory
     # view_raw_depth(second_file, width=424, height=240)
     image2 = get_color("images/2_Color.png", width=424, height=240)
     mask2 = get_mask("images/2_Color.png", width=424, height=240)
