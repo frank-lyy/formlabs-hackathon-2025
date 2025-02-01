@@ -151,18 +151,6 @@ meshcat = StartMeshcat()
 builder = DiagramBuilder()
 scenario = load_scenario(filename=scene_yaml_file)
 
-
-# robot_diagram_builder = RobotDiagramBuilder()
-# parser = robot_diagram_builder.parser()
-# parser.package_map().Add("Endowrist Mockup.SLDASM", os.path.join(data_directory, "assets/Endowrist Mockup.SLDASM"))
-# parser.package_map().Add("assets", os.path.join(data_directory, "assets"))
-# robot_model_instances = parser.AddModels(scene_yaml_file)
-# plant = robot_diagram_builder.plant()
-# plant.Finalize()
-# AddDefaultVisualization(robot_diagram_builder.builder(), meshcat=meshcat)
-# diagram = robot_diagram_builder.Build()
-
-
 def parser_preload_callback(parser):
     parser.package_map().Add("Robot.SLDASM", os.path.join(data_directory, "assets/Robot.SLDASM"))
     parser.package_map().Add("Endowrist Mockup.SLDASM", os.path.join(data_directory, "assets/Endowrist Mockup.SLDASM"))
@@ -210,6 +198,9 @@ for actuator_idx in plant.GetJointActuatorIndices():
         
 print(model_instances_indices_with_actuators)
 
+# for model_instance_idx in model_instances_indices_with_actuators.keys():
+#     plant.set_gravity_enabled(model_instance_idx, False)
+
 # Add Meshcat Slider Source System
 slider_source = builder.AddSystem(MeshcatSliderSource(meshcat))
 
@@ -251,14 +242,18 @@ if not joint_control:
     ik_system_context = ik_system.GetMyMutableContextFromRoot(simulator_context)
 
 # Main simulation loop
+meshcat.StartRecording()
 ctr = 0
+plant.SetPositions(plant_context, slider_source.get_output_port(0).Eval(slider_source_context)[:num_robot_positions])
 while not meshcat.GetButtonClicks("Close"):
-    if joint_control:
-        plant.SetPositions(plant_context, slider_source.get_output_port(0).Eval(slider_source_context)[:num_robot_positions])
-    else:
-        plant.SetPositions(plant_context, ik_system.get_output_port(0).Eval(ik_system_context)[:num_robot_positions])
-    simulator.AdvanceTo(simulator_context.get_time() + 0.01)
+    # if joint_control:
+    #     plant.SetPositions(plant_context, slider_source.get_output_port(0).Eval(slider_source_context)[:num_robot_positions])
+    # else:
+    #     plant.SetPositions(plant_context, ik_system.get_output_port(0).Eval(ik_system_context)[:num_robot_positions])
+    simulator.AdvanceTo(simulator_context.get_time() + 0.001)
     ctr += 1
     if (ctr == 100):
         ctr = 0
         print(plant.GetPositions(plant_context))
+        
+meshcat.PublishRecording()

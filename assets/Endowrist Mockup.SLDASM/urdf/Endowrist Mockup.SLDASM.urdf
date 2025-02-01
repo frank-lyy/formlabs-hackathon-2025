@@ -22,7 +22,7 @@
         xyz="-1.8273E-08 0.015299 -0.0033896"
         rpy="0 0 0" />
       <mass
-        value="0.1699" />
+        value="0.001699" />
       <inertia
         ixx="0.0001267"
         ixy="1.7466E-11"
@@ -45,15 +45,14 @@
           rgba="0.79216 0.81961 0.93333 1" />
       </material>
     </visual>
-    <!-- <collision>
+    <collision>
       <origin
-        xyz="0 0 0"
+        xyz="0 0 0.011"
         rpy="0 0 0" />
       <geometry>
-        <mesh
-          filename="package://Endowrist Mockup.SLDASM/meshes/endowrist_box.obj" />
+        <box size="0.065 0.095 0.022"/>
       </geometry>
-    </collision> -->
+    </collision>
   </link>
   <link
     name="endowrist_tube">
@@ -62,7 +61,7 @@
         xyz="9.4436E-09 -0.21543 4.421E-08"
         rpy="0 0 0" />
       <mass
-        value="0.010496" />
+        value="0.0010496" />
       <inertia
         ixx="0.00016247"
         ixy="1.789E-11"
@@ -232,7 +231,6 @@
       velocity="10" />
   </joint>
   <link
-
     name="endowrist_forcep2">
     <inertial>
       <origin

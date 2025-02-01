@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Many collision geometries are removed because those collisions are 
+simply not possible in real life / out of the domain of normal operation. -->
+
 <!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
      Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
      For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
@@ -34,15 +37,14 @@
           rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
       </material>
     </visual>
-    <collision>
+    <!-- <collision>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
       <geometry>
-        <mesh
-          filename="package://Robot.SLDASM/meshes/base_link.obj" />
+        <box size="0.095 0.065 0.022"/>
       </geometry>
-    </collision>
+    </collision> -->
   </link>
   <link
     name="link_arms_mount">
@@ -74,7 +76,7 @@
           rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
       </material>
     </visual>
-    <collision>
+    <!-- <collision>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -82,11 +84,11 @@
         <mesh
           filename="package://Robot.SLDASM/meshes/link_arms_mount.obj" />
       </geometry>
-    </collision>
+    </collision> -->
   </link>
   <joint
     name="joint_base_link_arms_mount"
-    type="prismatic">
+    type="fixed">
     <origin
       xyz="0 0 0.189973024634605"
       rpy="1.5707963267949 0 0" />
@@ -132,7 +134,7 @@
           rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
       </material>
     </visual>
-    <collision>
+    <!-- <collision>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -140,7 +142,7 @@
         <mesh
           filename="package://Robot.SLDASM/meshes/link_arm_left.obj" />
       </geometry>
-    </collision>
+    </collision> -->
   </link>
   <joint
     name="joint_arms_mount_arm_left"
@@ -190,7 +192,7 @@
           rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
       </material>
     </visual>
-    <collision>
+    <!-- <collision>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -198,7 +200,7 @@
         <mesh
           filename="package://Robot.SLDASM/meshes/link_wrist_left.obj" />
       </geometry>
-    </collision>
+    </collision> -->
   </link>
   <joint
     name="joint_arm_left_wrist_left"
@@ -225,7 +227,7 @@
         xyz="-0.0211270114572918 0.0194981353714892 0.00485073392977298"
         rpy="0 0 0" />
       <mass
-        value="0.170033716470039" />
+        value="0.070033716470039" />
       <inertia
         ixx="6.33541434846163E-05"
         ixy="-6.91281961305102E-07"
@@ -248,7 +250,7 @@
           rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
       </material>
     </visual>
-    <collision>
+    <!-- <collision>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -256,7 +258,7 @@
         <mesh
           filename="package://Robot.SLDASM/meshes/link_endowrist_left.obj" />
       </geometry>
-    </collision>
+    </collision> -->
   </link>
   <joint
     name="joint_wrist_left_endowrist_left"
@@ -283,7 +285,7 @@
         xyz="0.0442489364097362 0.0155231418754398 -0.0326499816862826"
         rpy="0 0 0" />
       <mass
-        value="0.169901755901047" />
+        value="0.009901755901047" />
       <inertia
         ixx="6.32722845999749E-05"
         ixy="-6.97696302086941E-07"
@@ -306,7 +308,7 @@
           rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
       </material>
     </visual>
-    <collision>
+    <!-- <collision>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -314,7 +316,7 @@
         <mesh
           filename="package://Robot.SLDASM/meshes/link_endowrist_box_left_ref.obj" />
       </geometry>
-    </collision>
+    </collision> -->
   </link>
   <joint
     name="joint_endowrist_left_endowrist_box_left_ref"
@@ -359,7 +361,7 @@
           rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
       </material>
     </visual>
-    <collision>
+    <!-- <collision>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -367,7 +369,7 @@
         <mesh
           filename="package://Robot.SLDASM/meshes/link_arm_right.obj" />
       </geometry>
-    </collision>
+    </collision> -->
   </link>
   <joint
     name="joint_arms_mount_arm_right"
@@ -417,7 +419,7 @@
           rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
       </material>
     </visual>
-    <collision>
+    <!-- <collision>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -425,7 +427,7 @@
         <mesh
           filename="package://Robot.SLDASM/meshes/link_wrist_right.obj" />
       </geometry>
-    </collision>
+    </collision> -->
   </link>
   <joint
     name="joint_arm_right_wrist_right"
@@ -452,7 +454,7 @@
         xyz="-0.0211270114572917 0.0194981353714892 0.00485073392977337"
         rpy="0 0 0" />
       <mass
-        value="0.17003371647004" />
+        value="0.07003371647004" />
       <inertia
         ixx="6.33541434846167E-05"
         ixy="-6.91281961305187E-07"
@@ -475,7 +477,7 @@
           rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
       </material>
     </visual>
-    <collision>
+    <!-- <collision>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -483,7 +485,7 @@
         <mesh
           filename="package://Robot.SLDASM/meshes/link_endowrist_right.obj" />
       </geometry>
-    </collision>
+    </collision> -->
   </link>
   <joint
     name="joint_wrist_right_endowrist_right"
@@ -510,7 +512,7 @@
         xyz="0.0442489364097368 0.0155231418754385 -0.0326499816862826"
         rpy="0 0 0" />
       <mass
-        value="0.169901755901048" />
+        value="0.009901755901048" />
       <inertia
         ixx="6.3272284599975E-05"
         ixy="-6.97696302083641E-07"
@@ -533,7 +535,7 @@
           rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
       </material>
     </visual>
-    <collision>
+    <!-- <collision>
       <origin
         xyz="0 0 0"
         rpy="0 0 0" />
@@ -541,7 +543,7 @@
         <mesh
           filename="package://Robot.SLDASM/meshes/link_endowrist_box_right_ref.obj" />
       </geometry>
-    </collision>
+    </collision> -->
   </link>
   <joint
     name="joint_endowrist_right_endowrist_box_right_ref"
@@ -557,7 +559,7 @@
       xyz="0 0 0" />
   </joint>
 
-  <transmission name="tran_base_link_arms_mount">
+  <!-- <transmission name="tran_base_link_arms_mount">
     <robotNamespace>/Robot.SLDASM</robotNamespace>
     <type>transmission_interface/SimpleTransmission</type>
     <joint name="joint_base_link_arms_mount">
@@ -569,7 +571,7 @@
         <drake:gear_ratio value="160.0" />
         <drake:rotor_inertia value="0.0001321" />
     </actuator>
-  </transmission>
+  </transmission> -->
   <transmission name="tran_arms_mount_arm_left">
     <robotNamespace>/Robot.SLDASM</robotNamespace>
     <type>transmission_interface/SimpleTransmission</type>

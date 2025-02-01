@@ -811,6 +811,19 @@ def MakeHardwareStation(
         package_xmls=package_xmls,
         builder=builder,
     )
+    
+    # Remove gravity
+    model_instances_indices_with_actuators = {}
+    for actuator_idx in sim_plant.GetJointActuatorIndices():
+        robot_model_instance_idx = sim_plant.get_joint_actuator(actuator_idx).model_instance()
+        if robot_model_instance_idx not in model_instances_indices_with_actuators.keys():
+            model_instances_indices_with_actuators[robot_model_instance_idx] = 1
+        else:
+            model_instances_indices_with_actuators[robot_model_instance_idx] += 1
+
+    for model_instance_idx in model_instances_indices_with_actuators.keys():
+        sim_plant.set_gravity_enabled(model_instance_idx, False)
+        print("removed gravity for ", model_instance_idx)
 
     sim_plant.Finalize()
 
