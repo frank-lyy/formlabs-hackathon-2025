@@ -18,6 +18,8 @@ from pydrake.all import (
     Quaternion,
     RigidTransform,
 )
+from manipulation.scenarios import AddMultibodyTriad
+from manipulation.meshcat_utils import AddMeshcatTriad
 
 import sys
 import os
@@ -38,9 +40,9 @@ scene_yaml_file = os.path.join(data_directory, "assets", "robot.dmd.yaml")
 
 meshcat = StartMeshcat()
 
-
 robot_diagram_builder = RobotDiagramBuilder()
 parser = robot_diagram_builder.parser()
+scene_graph = robot_diagram_builder.scene_graph()
 parser.package_map().Add("Robot.SLDASM", os.path.join(data_directory, "assets/Robot.SLDASM"))
 parser.package_map().Add("Endowrist Mockup.SLDASM", os.path.join(data_directory, "assets/Endowrist Mockup.SLDASM"))
 parser.package_map().Add("assets", os.path.join(data_directory, "assets"))
@@ -52,11 +54,31 @@ diagram = robot_diagram_builder.Build()
 
 num_robot_positions = plant.num_positions()
 
+# Find model instances with actuators for convenience
+model_instances_indices_with_actuators = {}
+for actuator_idx in plant.GetJointActuatorIndices():
+    robot_model_instance_idx = plant.get_joint_actuator(actuator_idx).model_instance()
+    if robot_model_instance_idx not in model_instances_indices_with_actuators.keys():
+        model_instances_indices_with_actuators[robot_model_instance_idx] = 1
+    else:
+        model_instances_indices_with_actuators[robot_model_instance_idx] += 1
+
+arms_model_instance_idx = list(model_instances_indices_with_actuators.keys())[0]
+endowrist_left_model_instance_idx = list(model_instances_indices_with_actuators.keys())[1]
+endowrist_right_model_instance_idx = list(model_instances_indices_with_actuators.keys())[2]
+
 simulator = Simulator(diagram)
 context = simulator.get_mutable_context()
 plant_context = plant.GetMyMutableContextFromRoot(context)
 
+AddMultibodyTriad(plant.GetFrameByName("endowrist_forcep1", endowrist_left_model_instance_idx), scene_graph)
+AddMultibodyTriad(plant.GetFrameByName("endowrist_forcep2", endowrist_left_model_instance_idx), scene_graph)
+AddMultibodyTriad(plant.GetFrameByName("endowrist_forcep1", endowrist_right_model_instance_idx), scene_graph)
+AddMultibodyTriad(plant.GetFrameByName("endowrist_forcep2", endowrist_right_model_instance_idx), scene_graph)
+
 meshcat.StartRecording()
+
+# ik(plant, plant_context, pose, translation_error=0, rotation_error=0.05, regions=None, pose_as_constraint=True)
 
 interpolated_array = np.linspace(0, 0.5, 100)[:, None] * np.ones((1, num_robot_positions))
 for i in range(interpolated_array.shape[0]):

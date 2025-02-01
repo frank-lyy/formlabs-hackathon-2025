@@ -84,15 +84,14 @@
           rgba="0.29804 0.29804 0.29804 1" />
       </material>
     </visual>
-    <!-- <collision>
+    <collision>
       <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
+        xyz="0 -0.2145 0"
+        rpy="1.57 0 0" />
       <geometry>
-        <mesh
-          filename="package://Endowrist Mockup.SLDASM/meshes/endowrist_tube.obj" />
+        <cylinder radius="0.00421" length="0.42929"/>
       </geometry>
-    </collision> -->
+    </collision>
   </link>
   <joint
     name="joint_endowrist_box_endowrist_tube"
@@ -143,15 +142,14 @@
           rgba="0.79216 0.81961 0.93333 1" />
       </material>
     </visual>
-    <!-- <collision>
+    <collision>
       <origin
-        xyz="0 0 0"
+        xyz="0.0083285 0 0"
         rpy="0 0 0" />
       <geometry>
-        <mesh
-          filename="package://Endowrist Mockup.SLDASM/meshes/endowrist_body.obj" />
+        <box size="0.01057 0.007 0.008"/>
       </geometry>
-    </collision> -->
+    </collision>
   </link>
   <joint
     name="joint_endowrist_tube_endowrist_body"
@@ -202,15 +200,14 @@
           rgba="0.79216 0.81961 0.93333 1" />
       </material>
     </visual>
-    <!-- <collision>
+    <collision>
       <origin
-        xyz="0 0 0"
+        xyz="0.01 0 -0.0006"
         rpy="0 0 0" />
       <geometry>
-        <mesh
-          filename="package://Endowrist Mockup.SLDASM/meshes/endowrist_forcep1.obj" />
+        <box size="0.008 0.0015 0.001"/>
       </geometry>
-    </collision> -->
+    </collision>
   </link>
   <joint
     name="joint_endowrist_body_endowrist_forcep1"
@@ -260,15 +257,14 @@
           rgba="0.79216 0.81961 0.93333 1" />
       </material>
     </visual>
-    <!-- <collision>
+    <collision>
       <origin
-        xyz="0 0 0"
+        xyz="0.01 0 0.0006"
         rpy="0 0 0" />
       <geometry>
-        <mesh
-          filename="package://Endowrist Mockup.SLDASM/meshes/endowrist_forcep2.obj" />
+        <box size="0.008 0.0015 0.001"/>
       </geometry>
-    </collision> -->
+    </collision>
   </link>
   <joint
     name="joint_endowrist_body_endowrist_forcep2"

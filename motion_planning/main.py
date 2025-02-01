@@ -1,3 +1,9 @@
+"""
+IGNORE
+
+For some reason, inverse dynamics controller seems to be unstable. To be debugged.
+"""
+
 from pydrake.all import (
     DiagramBuilder,
     StartMeshcat,
