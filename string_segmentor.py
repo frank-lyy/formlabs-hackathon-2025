@@ -4,8 +4,8 @@ import numpy as np
 
 def get_mask(image):
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    lower_bound = np.array([200, 50, 40])
-    upper_bound = np.array([270, 100, 100])
+    lower_bound = np.array([100, 128, 80])
+    upper_bound = np.array([180, 255, 255])
     return cv2.inRange(image_hsv, lower_bound, upper_bound)
 
 def get_masked_image(image, mask):
@@ -21,6 +21,7 @@ def main():
 
         # Get masked image
         mask = get_mask(image)
+        print(mask)
         image_masked = get_masked_image(image, mask)
 
         # Show frame
@@ -28,6 +29,7 @@ def main():
         cv2.imshow("mask", mask)
         cv2.imshow("image_masked", image_masked)
         if cv2.waitKey(1) == ord("q"):
+            cv2.imwrite("./images/test_zed.png", image)
             break
 
     # Close the ZED
