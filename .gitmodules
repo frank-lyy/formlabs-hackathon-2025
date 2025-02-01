@@ -1,0 +1,3 @@
+[submodule "HSV-Color-Detector-On-Images"]
+	path = HSV-Color-Detector-On-Images
+	url = git@github.com:sanjeewa999/HSV-Color-Detector-On-Images.git
