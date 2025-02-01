@@ -10,13 +10,13 @@ def get_mask_orange(image):
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     lower_bound = np.array([0, 50, 130])
     upper_bound = np.array([25, 255, 255])
-    return cv2.inRange(image_hsv, lower_bound, upper_bound)
+    return np.array(cv2.inRange(image_hsv, lower_bound, upper_bound), dtype=np.bool_)
 
 def get_mask_blue(image):
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     lower_bound = np.array([100, 20, 30])
     upper_bound = np.array([179, 255, 255])
-    return cv2.inRange(image_hsv, lower_bound, upper_bound)
+    return np.array(cv2.inRange(image_hsv, lower_bound, upper_bound), dtype=np.bool_)
 
 def get_masked_image(image, mask):
     return cv2.bitwise_and(image, image, mask=mask)
