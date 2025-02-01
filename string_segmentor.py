@@ -4,14 +4,14 @@ import numpy as np
 
 def get_mask_orange(image):
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    lower_bound = np.array([0, 0, 140])
-    upper_bound = np.array([125, 255, 255])
+    lower_bound = np.array([0, 50, 130])
+    upper_bound = np.array([25, 255, 255])
     return cv2.inRange(image_hsv, lower_bound, upper_bound)
 
 def get_mask_blue(image):
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    lower_bound = np.array([40, 0, 0])
-    upper_bound = np.array([179, 120, 160])
+    lower_bound = np.array([100, 20, 30])
+    upper_bound = np.array([179, 255, 255])
     return cv2.inRange(image_hsv, lower_bound, upper_bound)
 
 def get_masked_image(image, mask):
