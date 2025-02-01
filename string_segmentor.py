@@ -30,7 +30,7 @@ def main():
         "image": [],
         "mask_orange": [],
         "mask_blue": [],
-        "depth": [],
+        #"depth": [],
         "points": [],
     }
 
@@ -55,7 +55,7 @@ def main():
             data["image"].append(image)
             data["mask_blue"].append(mask_blue)
             data["mask_orange"].append(mask_orange)
-            data["depth"].append(depth)
+            #data["depth"].append(depth)
             data["points"].append(points)
 
         # Quit
@@ -64,7 +64,9 @@ def main():
             break
         
     # Save data
-    np.savez("data.npz", data)
+    for key, val in data.items():
+        data[key] = np.array(val)
+    np.savez("data.npz", **data)
 
     # Close the ZED
     zed.close()
