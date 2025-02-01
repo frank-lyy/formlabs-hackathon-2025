@@ -1,0 +1,53 @@
+directives:
+
+- add_model:
+    name: Robot.SLDASM
+    file: package://assets/Robot.SLDASM/urdf/Robot.SLDASM.urdf
+    # default_joint_positions:
+        # joint_a: [ -0.78 ]
+        # joint_b: [ -0.78 ]
+- add_weld:
+    parent: world
+    child: Robot.SLDASM::base_link
+    X_PC:
+        translation: [0, 0, -0.05]
+
+
+- add_model:
+    name: Endowrist Mockup.SLDASM Left
+    file: package://assets/Endowrist Mockup.SLDASM/urdf/Endowrist Mockup.SLDASM.urdf
+    # default_joint_positions:
+        # joint_a: [ -0.78 ]
+        # joint_b: [ -0.78 ]
+- add_weld:
+    parent: Robot.SLDASM::link_endowrist_box_left_ref
+    child: Endowrist Mockup.SLDASM Left::base_link
+    X_PC:
+        translation: [0.04764, 0, -0.03265]
+        rotation: !Rpy
+            deg: [-90, 90, 0]
+
+  
+- add_model:
+    name: Endowrist Mockup.SLDASM Right
+    file: package://assets/Endowrist Mockup.SLDASM/urdf/Endowrist Mockup.SLDASM.urdf
+    # default_joint_positions:
+        # joint_a: [ -0.78 ]
+        # joint_b: [ -0.78 ]
+- add_weld:
+    parent: Robot.SLDASM::link_endowrist_box_right_ref
+    child: Endowrist Mockup.SLDASM Right::base_link
+    X_PC:
+        translation: [0.04764, 0, -0.03265]
+        rotation: !Rpy
+            deg: [-90, 90, 0]
+
+
+- add_model:
+    name: workspace
+    file: package://assets/workspace.urdf
+- add_weld:
+    parent: world
+    child: workspace::base_link
+    X_PC:
+        translation: [0, 0, 0]

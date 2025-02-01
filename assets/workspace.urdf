@@ -1,0 +1,45 @@
+<robot
+  name="Robot.SLDASM">
+  <link
+    name="base_link">
+    <inertial>
+      <origin
+        xyz="0 0 0.0005"
+        rpy="0 0 0" />
+      <mass
+        value="1.184" />
+      <inertia
+        ixx="0.0149705333333333"
+        ixy="6.87953383496362E-21"
+        ixz="-4.0574441231613E-20"
+        iyy="0.0165909333333333"
+        iyz="-9.0033753745213E-19"
+        izz="0.00204253333333333" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 -0.4572 0"
+        rpy="0 0 0" />
+      <!-- <geometry>
+        <mesh
+          filename="package://assets/workspace.obj" scale="10 10 10"/>
+      </geometry> -->
+      <geometry>
+        <box size="0.6858 0.3048 0.001"/>
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.552941176470588 0.552941176470588 0.552941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 -0.3048 0.0005"
+        rpy="0 0 0" />
+      <geometry>
+        <box size="0.8 0.7 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>
