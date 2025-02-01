@@ -37,13 +37,14 @@ def main():
     # Initialize camera
     zed = initialize_camera()
 
-    # Get data
+    # Get data (image is in BGR)
     image, depth, points = get_camera_data(zed)
     
     print(f"Image: {image}\n")
     print(f"Depth: {depth}\n")
     print(f"Points: {points}")
 
+    # Close the ZED
     zed.close()
         
 if __name__ == "__main__":
