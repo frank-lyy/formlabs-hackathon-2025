@@ -6,7 +6,7 @@ import numpy as np
 import time
 
 FPS = 2
-record_data = False
+record_data = True
 
 def get_mask_orange(image):
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -62,6 +62,7 @@ def main():
         
     # Save data
     if record_data:
+        print("recording data...")
         for key, val in data.items():
             data[key] = np.array(val)
         cleaned_data = clean_data(data)
