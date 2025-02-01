@@ -1,4 +1,6 @@
 import pyzed.sl as sl
+import cv2
+import numpy as np
 
 
 def main():
@@ -21,11 +23,13 @@ def main():
     i = 0
     image = sl.Mat()
     runtime_parameters = sl.RuntimeParameters()
-    while i < 50:
+    while i < 100:
         # Grab an image, a RuntimeParameters object must be given to grab()
         if zed.grab(runtime_parameters) == sl.ERROR_CODE.SUCCESS:
             # A new image is available if grab() returns SUCCESS
             zed.retrieve_image(image, sl.VIEW.LEFT)
+            image_np = np.array(image.numpy()[:,:,:3], dtype=np.uint8)
+            cv2.imshow("frame", image_np)
             timestamp = zed.get_timestamp(sl.TIME_REFERENCE.CURRENT)  # Get the timestamp at the time the image was captured
             print("Image resolution: {0} x {1} || Image timestamp: {2}\n".format(image.get_width(), image.get_height(),
                   timestamp.get_milliseconds()))

@@ -24,7 +24,9 @@ def main():
         image_masked = get_masked_image(image, mask)
 
         # Show frame
-        cv2.imshow("frame", image_masked)
+        cv2.imshow("image", image)
+        cv2.imshow("mask", mask)
+        cv2.imshow("image_masked", image_masked)
         if cv2.waitKey(1) == ord("q"):
             break
 

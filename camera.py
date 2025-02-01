@@ -8,6 +8,8 @@ def initialize_camera():
 
     # Create a InitParameters object and set configuration parameters
     init_params = sl.InitParameters()
+    init_params.camera_resolution = sl.RESOLUTION.AUTO
+    init_params.camera_fps = 30
     init_params.depth_mode = sl.DEPTH_MODE.NEURAL
     init_params.coordinate_units = sl.UNIT.METER
 
