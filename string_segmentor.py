@@ -1,6 +1,9 @@
 from camera import *
 import cv2
 import numpy as np
+import time
+
+FPS = 10
 
 def get_mask_orange(image):
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -20,6 +23,16 @@ def get_masked_image(image, mask):
 def main():
     # Initialize camera
     zed = initialize_camera()
+    prev_time = time.time()
+
+    # Store data
+    data = {
+        "image": [],
+        "mask_orange": [],
+        "mask_blue": [],
+        "depth": [],
+        "points": [],
+    }
 
     while True:
         # Get data
@@ -35,9 +48,23 @@ def main():
         cv2.imshow("image", image)
         cv2.imshow("orange", image_orange)
         cv2.imshow("blue", image_blue)
+
+        # Store data
+        if time.time() - prev_time > 1 / FPS:
+            prev_time = time.time()
+            data["image"].append(image)
+            data["mask_blue"].append(mask_blue)
+            data["mask_orange"].append(mask_orange)
+            data["depth"].append(depth)
+            data["points"].append(points)
+
+        # Quit
         if cv2.waitKey(1) == ord("q"):
             cv2.imwrite("./images/test_zed.png", image)
             break
+        
+    # Save data
+    np.savez("data.npz")
 
     # Close the ZED
     zed.close()
