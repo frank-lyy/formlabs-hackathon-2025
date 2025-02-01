@@ -1,6 +1,5 @@
 import pyzed.sl as sl
 import numpy as np
-import time
 
 def initialize_camera():
     # Create a Camera object
@@ -33,7 +32,11 @@ def get_camera_data(zed):
     zed.retrieve_measure(depth, sl.MEASURE.DEPTH)
     zed.retrieve_measure(point_cloud, sl.MEASURE.XYZRGBA)
 
-    return image.numpy()[:,:,:3], depth.numpy(), np.array(point_cloud.numpy()[:,:,:3])
+    image_np = np.array(image.numpy()[:,:,:3], dtype=np.uint8)
+    depth_np = np.array(depth.numpy(), dtype=np.float32)
+    point_cloud_np = np.array(point_cloud.numpy()[:,:,:3], dtype=np.float32)
+
+    return image_np, depth_np, point_cloud_np
 
 def main():
     # Initialize camera
