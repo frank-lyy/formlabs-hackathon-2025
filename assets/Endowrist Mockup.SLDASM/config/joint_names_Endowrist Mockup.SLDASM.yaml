@@ -1,0 +1,1 @@
+controller_joint_names: ['', 'joint_endowrist_box_endowrist_tube', 'joint_endowrist_tube_endowrist_body', 'joint_endowrist_body_endowrist_forcep1', 'joint_endowrist_body_endowrist_forcep2', ]

@@ -1,0 +1,13 @@
+directives:
+
+- add_model:
+    name: Endowrist Mockup.SLDASM
+    file: package://assets/Endowrist Mockup.SLDASM/urdf/Endowrist Mockup.SLDASM.urdf
+    # default_joint_positions:
+        # joint_a: [ -0.78 ]
+        # joint_b: [ -0.78 ]
+- add_weld:
+    parent: world
+    child: Endowrist Mockup.SLDASM::base_link
+    X_PC:
+        translation: [0, 0, 0]

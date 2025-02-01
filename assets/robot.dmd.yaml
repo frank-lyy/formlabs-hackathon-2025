@@ -1,0 +1,13 @@
+directives:
+
+- add_model:
+    name: Robot.SLDASM
+    file: package://assets/Robot.SLDASM/urdf/Robot.SLDASM.urdf
+    # default_joint_positions:
+        # joint_a: [ -0.78 ]
+        # joint_b: [ -0.78 ]
+- add_weld:
+    parent: world
+    child: Robot.SLDASM::base_link
+    X_PC:
+        translation: [0, 0, 0]
