@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import time
 
-FPS = 10
+FPS = 5
 
 def get_mask_orange(image):
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
