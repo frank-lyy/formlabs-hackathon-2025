@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from numpy.testing import assert_array_almost_equal
 from functools import partial
 from mpl_toolkits.mplot3d import Axes3D
+from sklearn.neighbors import NearestNeighbors
 
 def get_pointcloud(filename, width, height, remove_sides=False):
     depth_image = get_depth(filename+"_Depth.raw", width, height)
@@ -63,6 +64,22 @@ def pc_registration(pointcloud_1, pointcloud_2, visualize=False):
     TY = (TY_norm * pc2_scale) + pc2_centroid
     
     return TY
+
+def track_state(filename_t1, filename_t2):
+    pointcloud_1 = get_pointcloud(filename_t1, width=424, height=240, remove_sides=True)
+    pointcloud_2 = get_pointcloud(filename_t2, width=424, height=240, remove_sides=True)
+
+    TY = pc_registration(pointcloud_1, pointcloud_2)
+
+    # order the points in pointcloud_2 based on the order of the closest points in TY
+    nn = NearestNeighbors(n_neighbors=1, algorithm='kd_tree')
+    nn.fit(pointcloud_2)
+    
+    distances, indices = nn.kneighbors(TY)
+    unique_indices = np.unique(indices)
+    
+    new_pointcloud_2 = pointcloud_2[unique_indices.flatten(), :]
+    return new_pointcloud_2
 
 def visualize_labeled_pointclouds(filename_t1, filename_t2):
     image1 = get_color(filename_t1+"_Color.png", width=424, height=240)
