@@ -64,7 +64,7 @@ def main():
             break
         
     # Save data
-    np.savez("data.npz")
+    np.savez("data.npz", data)
 
     # Close the ZED
     zed.close()
