@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from numpy.testing import assert_array_almost_equal
 from functools import partial
 from mpl_toolkits.mplot3d import Axes3D
+from sklearn.neighbors import NearestNeighbors
 
 def get_pointcloud(filename, width, height, remove_sides=False):
     depth_image = get_depth(filename+"_Depth.raw", width, height)
@@ -17,6 +18,31 @@ def get_pointcloud(filename, width, height, remove_sides=False):
                 pointcloud.append([i, j, depth_image[i, j]])
                 
     return np.array(pointcloud)
+
+def initial_pointcloud_order(pointcloud):
+    # In the real setup, we will sort by y- or x- coordinate
+    # For this example image, we can use angle about the origin since the loop is arranged in a rough circle
+    # Normalize the pointcloud around unit hypersphere
+    normed_pointcloud, _, _ = normalize_pointcloud(pointcloud)
+    
+    angle_offset = np.pi * .54
+    arctan_with_offset = np.arctan2(normed_pointcloud[:, 1], normed_pointcloud[:, 0]) + angle_offset
+    # print(np.max(arctan_with_offset), np.min(arctan_with_offset))
+    arctan_with_offset = np.mod(arctan_with_offset + np.pi, 2 * np.pi) - np.pi
+    # print(np.max(arctan_with_offset), np.min(arctan_with_offset))
+    new_pointcloud = pointcloud[np.argsort(arctan_with_offset)]
+    
+    # visualize this pointcloud, on a red-blue scale based on angle
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    colors = np.interp(arctan_with_offset, [-np.pi, np.pi], [0, 1])
+    ax.scatter(normed_pointcloud[:, 0], normed_pointcloud[:, 1], normed_pointcloud[:, 2], c=colors)
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    plt.show()
+
+    return new_pointcloud
 
 def normalize_pointcloud(points):
     centroid = np.mean(points, axis=0)
@@ -64,6 +90,26 @@ def pc_registration(pointcloud_1, pointcloud_2, visualize=False):
     
     return TY
 
+def track_state(filename_t1, filename_t2):
+    pointcloud_1 = get_pointcloud(filename_t1, width=424, height=240, remove_sides=True)
+    pointcloud_1 = initial_pointcloud_order(pointcloud_1)
+    pointcloud_2 = get_pointcloud(filename_t2, width=424, height=240, remove_sides=True)
+
+    TY = pc_registration(pointcloud_1, pointcloud_2, visualize=False)
+
+    # order the points in pointcloud_2 based on the order of the closest points in TY
+    nn = NearestNeighbors(n_neighbors=1, algorithm='kd_tree')
+    nn.fit(pointcloud_2)
+    
+    distances, indices = nn.kneighbors(TY)
+    # could probably also use the more complicated unique_indices method but this is easier for now
+    unique_indices = indices[np.sort(np.unique(indices, return_index=True)[1])].flatten()
+    
+    new_pointcloud_2 = pointcloud_2[unique_indices, :]
+    # print(pointcloud_2)
+    # print(new_pointcloud_2)
+    return new_pointcloud_2
+
 def visualize_labeled_pointclouds(filename_t1, filename_t2):
     image1 = get_color(filename_t1+"_Color.png", width=424, height=240)
     image2 = get_color(filename_t2+"_Color.png", width=424, height=240)
@@ -100,4 +146,5 @@ def visualize_labeled_pointclouds(filename_t1, filename_t2):
     plt.show()
     
 if __name__ == "__main__":
-    visualize_labeled_pointclouds("images/1", "images/2")
+    # visualize_labeled_pointclouds("images/1", "images/2")
+    track_state("images/1", "images/2")
