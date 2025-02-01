@@ -2,7 +2,13 @@ from camera import *
 import cv2
 import numpy as np
 
-def get_mask(image):
+def get_mask_orange(image):
+    image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    lower_bound = np.array([0, 0, 140])
+    upper_bound = np.array([125, 255, 255])
+    return cv2.inRange(image_hsv, lower_bound, upper_bound)
+
+def get_mask_blue(image):
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     lower_bound = np.array([40, 0, 0])
     upper_bound = np.array([179, 120, 160])
@@ -20,14 +26,15 @@ def main():
         image, depth, points = get_camera_data(zed)
 
         # Get masked image
-        mask = get_mask(image)
-        print(mask)
-        image_masked = get_masked_image(image, mask)
+        mask_orange = get_mask_orange(image)
+        mask_blue = get_mask_blue(image)
+        image_orange = get_masked_image(image, mask_orange)
+        image_blue = get_masked_image(image, mask_blue)
 
         # Show frame
         cv2.imshow("image", image)
-        cv2.imshow("mask", mask)
-        cv2.imshow("image_masked", image_masked)
+        cv2.imshow("orange", image_orange)
+        cv2.imshow("blue", image_blue)
         if cv2.waitKey(1) == ord("q"):
             cv2.imwrite("./images/test_zed.png", image)
             break
