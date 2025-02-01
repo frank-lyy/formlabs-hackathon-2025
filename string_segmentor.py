@@ -3,7 +3,8 @@ import cv2
 import numpy as np
 import time
 
-FPS = 5
+FPS = 2
+record_data = False
 
 def get_mask_orange(image):
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -27,10 +28,7 @@ def main():
 
     # Store data
     data = {
-        "image": [],
-        "mask_orange": [],
-        "mask_blue": [],
-        #"depth": [],
+        "mask": [],
         "points": [],
     }
 
@@ -50,12 +48,9 @@ def main():
         cv2.imshow("blue", image_blue)
 
         # Store data
-        if time.time() - prev_time > 1 / FPS:
+        if time.time() - prev_time > 1 / FPS and record_data:
             prev_time = time.time()
-            data["image"].append(image)
-            data["mask_blue"].append(mask_blue)
-            data["mask_orange"].append(mask_orange)
-            #data["depth"].append(depth)
+            data["mask"].append(mask_blue)
             data["points"].append(points)
 
         # Quit
@@ -64,9 +59,10 @@ def main():
             break
         
     # Save data
-    for key, val in data.items():
-        data[key] = np.array(val)
-    np.savez("data.npz", **data)
+    if record_data:
+        for key, val in data.items():
+            data[key] = np.array(val)
+        np.savez("data.npz", **data)
 
     # Close the ZED
     zed.close()
