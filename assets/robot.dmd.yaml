@@ -10,7 +10,7 @@ directives:
     parent: world
     child: Robot.SLDASM::base_link
     X_PC:
-        translation: [0, 0, 0]
+        translation: [0, 0, -0.05]
 
 
 - add_model:
@@ -41,3 +41,13 @@ directives:
         translation: [0.04764, 0, -0.03265]
         rotation: !Rpy
             deg: [-90, 90, 0]
+
+
+- add_model:
+    name: workspace
+    file: package://assets/workspace.urdf
+- add_weld:
+    parent: world
+    child: workspace::base_link
+    X_PC:
+        translation: [0, 0, 0]

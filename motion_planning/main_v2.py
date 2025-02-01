@@ -17,6 +17,7 @@ from pydrake.all import (
     Rgba,
     Quaternion,
     RigidTransform,
+    RotationMatrix,
 )
 from manipulation.scenarios import AddMultibodyTriad
 from manipulation.meshcat_utils import AddMeshcatTriad
@@ -48,11 +49,6 @@ parser.package_map().Add("Endowrist Mockup.SLDASM", os.path.join(data_directory,
 parser.package_map().Add("assets", os.path.join(data_directory, "assets"))
 robot_model_instances = parser.AddModels(scene_yaml_file)
 plant = robot_diagram_builder.plant()
-plant.Finalize()
-AddDefaultVisualization(robot_diagram_builder.builder(), meshcat=meshcat)
-diagram = robot_diagram_builder.Build()
-
-num_robot_positions = plant.num_positions()
 
 # Find model instances with actuators for convenience
 model_instances_indices_with_actuators = {}
@@ -67,20 +63,32 @@ arms_model_instance_idx = list(model_instances_indices_with_actuators.keys())[0]
 endowrist_left_model_instance_idx = list(model_instances_indices_with_actuators.keys())[1]
 endowrist_right_model_instance_idx = list(model_instances_indices_with_actuators.keys())[2]
 
+# Collect EEF frames and Draw Triads at EEF
+# We treat forcep 1's frame as the EEF and simply offset each forcep angle a bit if we want to open the gripper
+left_eef_frame = plant.GetFrameByName("endowrist_forcep1", endowrist_left_model_instance_idx)
+right_eef_frame = plant.GetFrameByName("endowrist_forcep1", endowrist_right_model_instance_idx)
+AddMultibodyTriad(left_eef_frame, scene_graph, length=0.05, radius=0.001, opacity=0.5)
+AddMultibodyTriad(right_eef_frame, scene_graph, length=0.05, radius=0.001, opacity=0.5)
+
+plant.Finalize()
+AddDefaultVisualization(robot_diagram_builder.builder(), meshcat=meshcat)
+diagram = robot_diagram_builder.Build()
+
+num_robot_positions = plant.num_positions()
+
 simulator = Simulator(diagram)
 context = simulator.get_mutable_context()
 plant_context = plant.GetMyMutableContextFromRoot(context)
 
-AddMultibodyTriad(plant.GetFrameByName("endowrist_forcep1", endowrist_left_model_instance_idx), scene_graph)
-AddMultibodyTriad(plant.GetFrameByName("endowrist_forcep2", endowrist_left_model_instance_idx), scene_graph)
-AddMultibodyTriad(plant.GetFrameByName("endowrist_forcep1", endowrist_right_model_instance_idx), scene_graph)
-AddMultibodyTriad(plant.GetFrameByName("endowrist_forcep2", endowrist_right_model_instance_idx), scene_graph)
-
 meshcat.StartRecording()
 
-# ik(plant, plant_context, pose, translation_error=0, rotation_error=0.05, regions=None, pose_as_constraint=True)
+pose = RigidTransform(RotationMatrix.MakeXRotation(np.pi).MakeYRotation(np.pi/2), np.array([0, -0.5, 0.1]))
+q, _ = ik(plant, plant_context, left_eef_frame, pose, translation_error=0, rotation_error=0.05, regions=None, pose_as_constraint=True)
+print(q)
 
-interpolated_array = np.linspace(0, 0.5, 100)[:, None] * np.ones((1, num_robot_positions))
+
+t = np.linspace(0, 1, 100)
+interpolated_array = np.array([(1 - tau)*np.zeros(num_robot_positions) + tau*q for tau in t])
 for i in range(interpolated_array.shape[0]):
     plant.SetPositions(plant_context, interpolated_array[i])
     simulator.AdvanceTo(context.get_time() + 0.001)

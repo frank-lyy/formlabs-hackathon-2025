@@ -174,9 +174,11 @@ default_joint_positions = plant.GetPositions(plant.CreateDefaultContext())
 ee_frame = plant.GetFrameByName("link_endowrist_box_left_ref")
 
 if joint_control:
+    lower_limits = plant.GetPositionLowerLimits()
+    upper_limits = plant.GetPositionUpperLimits()
     # Add slider for each joint
     for i in range(num_robot_positions):
-        meshcat.AddSlider(f'q{i}', -np.pi, np.pi, 0.01, default_joint_positions[i])
+        meshcat.AddSlider(f'q{i}', lower_limits[i], upper_limits[i], 0.01, default_joint_positions[i])
 else:
     default_pose = plant.CalcRelativeTransform(plant.CreateDefaultContext(), plant.world_frame(), ee_frame)
     meshcat.AddSlider('x', -1.0, 2.0, 0.01, default_pose.translation()[0])

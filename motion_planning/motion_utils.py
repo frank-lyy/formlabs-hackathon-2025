@@ -21,7 +21,7 @@ import os
 import sys
 import time
 
-q_nominal = np.zeros(15)
+q_nominal = np.zeros(14)
 
 
 def diagram_visualize_connections(diagram: Diagram, file: Union[BinaryIO, str]) -> None:
@@ -35,10 +35,10 @@ def diagram_visualize_connections(diagram: Diagram, file: Union[BinaryIO, str]) 
     file.write(svg_data)
     
 
-def ik(plant, plant_context, pose, translation_error=0, rotation_error=0.05, regions=None, pose_as_constraint=True):
+def ik(plant, plant_context, frame, pose, translation_error=0, rotation_error=0.05, regions=None, pose_as_constraint=True) -> tuple[np.ndarray, bool]:
     """
     Use Inverse Kinematics to solve for a configuration that satisfies a
-    task-space pose. 
+    task-space pose for a given frame. 
     
     If regions is not None, this function also ensures the configuration is
     reachable within one of the regions (or return None if this isn't possible).
@@ -71,7 +71,7 @@ def ik(plant, plant_context, pose, translation_error=0, rotation_error=0.05, reg
         if pose_as_constraint:
             ik.AddPositionConstraint(
                 frameA=plant.world_frame(),
-                frameB=plant.GetFrameByName("arm_eef"),
+                frameB=frame,
                 p_BQ=[0, 0, 0],
                 p_AQ_lower=pose.translation() - translation_error,
                 p_AQ_upper=pose.translation() + translation_error,
@@ -79,7 +79,7 @@ def ik(plant, plant_context, pose, translation_error=0, rotation_error=0.05, reg
             ik.AddOrientationConstraint(
                 frameAbar=plant.world_frame(),
                 R_AbarA=pose.rotation(),
-                frameBbar=plant.GetFrameByName("arm_eef"),
+                frameBbar=frame,
                 R_BbarB=RotationMatrix(),
                 theta_bound=rotation_error,
             )
@@ -88,12 +88,12 @@ def ik(plant, plant_context, pose, translation_error=0, rotation_error=0.05, reg
             # Add costs instead of constraints for pose
             ik.AddPositionCost(plant.world_frame(),
                                pose.translation(),
-                               plant.GetFrameByName("arm_eef"),
+                               frame,
                                [0, 0, 0],
                                np.identity(3))
             ik.AddOrientationCost(plant.world_frame(),
                                   pose.rotation(),
-                                  plant.GetFrameByName("arm_eef"),
+                                  frame,
                                   RotationMatrix(),
                                   1)
 
