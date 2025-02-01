@@ -92,7 +92,7 @@ def visualize_data(cleaned_data):
     ax = fig.add_subplot(111, projection='3d')
     
     # Initialize visualization state
-    current_frame = [0]  # Use list to allow modification in callback
+    current_frame = [n]  # Use list to allow modification in callback
     paused = [True]
     
     def on_key(event):
@@ -108,12 +108,16 @@ def visualize_data(cleaned_data):
             visualize_helper(current_frame[0] + 1, all_cleaned_points[current_frame[0]], ax)
     
     fig.canvas.mpl_connect('key_press_event', on_key)
-    
+
+    for i in range(n+1):
+        visualize_helper(i+1, all_cleaned_points[i], ax)
+
     # Animation loop
     print("Beginning animation")
     while plt.fignum_exists(fig.number):
-        if not paused[0] and current_frame[0] < n:
-            visualize_helper(current_frame[0] + 1, all_cleaned_points[current_frame[0]], ax)
+        if not paused[0] and current_frame[0] <= n:
+            print("Playing")
+            visualize_helper(current_frame[0]+1, all_cleaned_points[current_frame[0]], ax)
             current_frame[0] += 1
         plt.pause(0.1)
     
