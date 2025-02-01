@@ -1,4 +1,6 @@
 from camera import *
+from data_loader import *
+
 import cv2
 import numpy as np
 import time
@@ -62,7 +64,8 @@ def main():
     if record_data:
         for key, val in data.items():
             data[key] = np.array(val)
-        np.savez("data.npz", **data)
+        cleaned_data = clean_data(data)
+        np.savez("data/video.npz", **cleaned_data)
 
     # Close the ZED
     zed.close()
