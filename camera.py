@@ -25,13 +25,13 @@ def get_camera_data(zed):
 
     runtime_parameters = sl.RuntimeParameters()
     while zed.grab(runtime_parameters) != sl.ERROR_CODE.SUCCESS:
-        time.sleep(1/60)
+        pass
 
     zed.retrieve_image(image, sl.VIEW.LEFT)
     zed.retrieve_measure(depth, sl.MEASURE.DEPTH)
     zed.retrieve_measure(point_cloud, sl.MEASURE.XYZRGBA)
 
-    return image, depth, point_cloud
+    return image.numpy()[:,:,:3], depth.numpy(), np.array(point_cloud.numpy()[:,:,:3])
 
 def main():
     # Initialize camera
