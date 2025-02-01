@@ -5,7 +5,7 @@ import numpy as np
 def get_mask(image):
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     lower_bound = np.array([40, 0, 0])
-    upper_bound = np.array([140, 100, 90])
+    upper_bound = np.array([179, 120, 160])
     return cv2.inRange(image_hsv, lower_bound, upper_bound)
 
 def get_masked_image(image, mask):
