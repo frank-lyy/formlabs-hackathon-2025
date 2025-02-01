@@ -8,8 +8,9 @@ class SegmentType(Enum):
     SEGMENT = 0
     BEND = 1
     LOOP = 2
+    END = 4
 
-def segment_shoelace(points, curvature_threshold=0.2, loop_threshold=0.05):
+def segment_shoelace(points, curvature_threshold=0.1, loop_threshold=0.05):
     """
     Segments an ordered shoelace point cloud into sections based on bends and loops.
 
@@ -56,7 +57,7 @@ def segment_shoelace(points, curvature_threshold=0.2, loop_threshold=0.05):
     start_idx = 0
     for segment_idx in segment_indices[1:]:
         if segment_idx in bend_indices:
-            segments.append((start_idx, segment_idx, SegmentType.SEGMENT)) # because the bend indices just tell you where the bends are..
+            segments.append((start_idx, segment_idx, SegmentType.BEND))
         elif segment_idx in loop_indices:
             segments.append((start_idx, segment_idx, SegmentType.LOOP))
         else:
@@ -66,10 +67,21 @@ def segment_shoelace(points, curvature_threshold=0.2, loop_threshold=0.05):
     return segments
 
 def visualize_segments(points, segments):
+    color_map = {
+        SegmentType.SEGMENT: 'red',
+        SegmentType.BEND: 'blue',
+        SegmentType.LOOP: 'green',
+        SegmentType.END: 'purple',
+    }
     labeled_points = {}
     for (start_idx, end_idx, segment_type) in segments:
+        if segment_type == SegmentType.LOOP:
+            # skip to the next LOOP... have to implement this somehow
+            pass
         for i in range(start_idx, end_idx):
-            labeled_points[i] = segment_type
+            labeled_points[i] = color_map[segment_type]
+    for i in range(end_idx, len(points)):
+        labeled_points[i] = color_map[SegmentType.END]
     
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
@@ -78,4 +90,6 @@ def visualize_segments(points, segments):
     return ax
 
 if __name__ == "__main__":
-    pass
+    new_pointcloud_2 = track_state("images/1", "images/2")
+    segments = segment_shoelace(new_pointcloud_2)
+    visualize_segments(new_pointcloud_2, segments)
