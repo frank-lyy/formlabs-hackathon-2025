@@ -115,14 +115,17 @@ class VectorSplitter(LeafSystem):
     it into 2 output vectors of size out1 and out2. This is used for multi-robot
     plants so the output of one controller can control both robots.
     """
-    def __init__(self, out1, out2=0):
+    def __init__(self, out1, out2=0, out3=0):
         super().__init__()
         self.out1 = out1
         self.out2 = out2
-        self.DeclareVectorInputPort("input", BasicVector(out1 + out2))
+        self.out3 = out3
+        self.DeclareVectorInputPort("input", BasicVector(out1 + out2 + out3))
         self.DeclareVectorOutputPort("output_1", BasicVector(out1), self.Output1)
         if out2 > 0:
             self.DeclareVectorOutputPort("output_2", BasicVector(out2), self.Output2)
+        if out3 > 0:
+            self.DeclareVectorOutputPort("output_3", BasicVector(out3), self.Output3)
 
     def Output1(self, context, output):
         input_vector = self.get_input_port(0).Eval(context)
@@ -130,7 +133,11 @@ class VectorSplitter(LeafSystem):
 
     def Output2(self, context, output):
         input_vector = self.get_input_port(0).Eval(context)
-        output.SetFromVector(input_vector[self.out1:])  # return latter `out2` elements
+        output.SetFromVector(input_vector[self.out1:self.out1 + self.out2])  # return middle `out2` elements
+
+    def Output3(self, context, output):
+        input_vector = self.get_input_port(0).Eval(context)
+        output.SetFromVector(input_vector[self.out1 + self.out2:])  # return latter `out3` elements
 
 
 parser = argparse.ArgumentParser()
@@ -158,6 +165,7 @@ scenario = load_scenario(filename=scene_yaml_file)
 
 def parser_preload_callback(parser):
     parser.package_map().Add("Robot.SLDASM", os.path.join(data_directory, "assets/Robot.SLDASM"))
+    parser.package_map().Add("Endowrist Mockup.SLDASM", os.path.join(data_directory, "assets/Endowrist Mockup.SLDASM"))
     parser.package_map().Add("assets", os.path.join(data_directory, "assets"))
 
 # Hardware station setup
@@ -199,6 +207,8 @@ for actuator_idx in plant.GetJointActuatorIndices():
         model_instances_indices_with_actuators[robot_model_instance_idx] = 1
     else:
         model_instances_indices_with_actuators[robot_model_instance_idx] += 1
+        
+print(model_instances_indices_with_actuators)
 
 # Add Meshcat Slider Source System
 slider_source = builder.AddSystem(MeshcatSliderSource(meshcat))
