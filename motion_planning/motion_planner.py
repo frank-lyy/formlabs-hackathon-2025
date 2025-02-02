@@ -55,7 +55,7 @@ def VisualizePath(meshcat, plant, frame, traj, name):
         
         
 def KinematicTrajOpt(plant, plant_context, endowrist_model_instance_idx, frame_name, 
-                     frame_model_instance_idx, wrist_joint_idx, X_Start, X_Goal, 
+                     frame_model_instance_idx, wrist_joint_idx, X_Start, X_Goal, open_close,
                      acceptable_pos_err=0.001, acceptable_angle_error=0.05, acceptable_vel_err=0.01) -> BsplineTrajectory:    
     frame = plant.GetFrameByName(frame_name, frame_model_instance_idx)
     
@@ -111,12 +111,14 @@ def KinematicTrajOpt(plant, plant_context, endowrist_model_instance_idx, frame_n
         [0, 0, 0],
         plant_context
     )
+    # Offset the gripping angle from if the gripper is open (i.e. the forcep is at an angle)
+    goal_orientation_offset = RotationMatrix.MakeYRotation(-gripper_open_angle/2) if not open_close else RotationMatrix()
     goal_orientation_constraint = OrientationConstraint(
         plant,
         plant.world_frame(),
         X_Goal.rotation(),  # orientation of X_Goal in world frame ...
         frame,
-        RotationMatrix.MakeYRotation(-gripper_open_angle/2),  # So that the middle between the two grippers faces down
+        goal_orientation_offset,  # So that the middle between the two grippers faces down
         acceptable_angle_error,
         plant_context
     )
@@ -143,12 +145,16 @@ def KinematicTrajOpt(plant, plant_context, endowrist_model_instance_idx, frame_n
     # for s in evaluate_at_s:
     #     trajopt.AddPathPositionConstraint(collision_constraint, s)
         
-    # Add open gripper constraint
+    # Add open/close gripper constraint
     a = np.zeros((1, plant.num_positions()))
     a[0][plant.GetJointByName("joint_endowrist_body_endowrist_forcep1", endowrist_model_instance_idx).position_start()] = 1
     a[0][plant.GetJointByName("joint_endowrist_body_endowrist_forcep2", endowrist_model_instance_idx).position_start()] = -1
-    lb = np.array([[gripper_open_angle - 0.01]])
-    ub = np.array([[gripper_open_angle + 0.01]])
+    if open_close:  # Closed
+        lb = np.array([[-0.01]])
+        ub = np.array([[+0.01]])
+    else:
+        lb = np.array([[gripper_open_angle - 0.01]])
+        ub = np.array([[gripper_open_angle + 0.01]])
     for s in evaluate_at_s:
         trajopt.AddPathPositionConstraint(LinearConstraint(a, lb, ub), s)
 
