@@ -12,14 +12,14 @@ MultiStepper steppers;
 #define ACTION_LEN 3
 
 // Servo settings
-#define SERVO_MIN 650
-#define SERVO_MAX 2350
+#define SERVO_MIN 125
+#define SERVO_MAX 625
 #define SERVO_FREQ 60
 #define SERVO_A_A_ID 0
 #define SERVO_A_B_ID 1
 #define SERVO_A_C_ID 2
 #define SERVO_A_D_ID 3
-#define SERVO_A_WRIST_ID 5
+#define SERVO_A_WRIST_ID 4
 #define SERVO_B_A_ID 5
 #define SERVO_B_B_ID 6
 #define SERVO_B_C_ID 7
@@ -150,6 +150,7 @@ void setup() {
 }
 
 uint8_t inBytes[CMD_LEN];
+int numBytes = 0;
 void loop() {
   if (Serial.available() > 0) {
     // Push new data to the bytes queue
@@ -157,9 +158,11 @@ void loop() {
       inBytes[i] = inBytes[i + 1];
     }
     inBytes[CMD_LEN - 1] = Serial.read();
+    numBytes++;
 
     // New full command has been received
-    if (inBytes[0] == 0xFF) {
+    if (inBytes[0] == 0xFF && numBytes >= CMD_LEN) {
+      numBytes = 0;
       uint8_t actionIndex = inBytes[1];
       if (actionIndex >= 0 && actionIndex < ACTION_LEN) {
         actions[actionIndex](&inBytes[2]); // Pass the remaining command bytes

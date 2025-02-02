@@ -2,7 +2,7 @@ import serial
 import time 
 
 def main():
-    ser0 = serial.Serial(port="/dev/ttyACM0", baudrate=9600, timeout=1) 
+    ser0 = serial.Serial(port="/dev/ttyACM1", baudrate=9600, timeout=1) 
     time.sleep(2)
 
     try:
