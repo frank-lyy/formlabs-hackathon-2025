@@ -1,5 +1,6 @@
 from camera import *
-from data_loader import clean_data
+from data_loader import *
+from point_correspondences import *
 
 import cv2
 import numpy as np
@@ -7,6 +8,19 @@ import time
 
 FPS = 2
 record_data = True
+
+def get_string_point(reference_pc, string_name, pos=None):
+    """
+    string_name is either "left" or "right"
+    
+    0 <= pos <= 1 is used if the reference_pc is a line (i.e. contains 2 points)
+    
+    Otherwise, this function should the xyz location of the origin of the reference_pc
+    relative to camera left optical frame.
+    
+    Return (x,y,z)
+    """
+    pass
 
 def get_mask_orange(image):
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -23,16 +37,34 @@ def get_mask_blue(image):
 def get_masked_image(image, mask):
     return cv2.bitwise_and(image, image, mask=mask)
 
+def get_initial_pointcloud_order(mask, points):
+    data = {
+        "mask": [mask],
+        "points": [points]
+    }
+    cleaned_data = clean_data(data)
+    ordered_initial_points = initial_pointcloud_order(cleaned_data["initial_points"])
+    
+    return ordered_initial_points
+
+def realtime_track_state(source_pointcloud, mask, points):
+    target_data = {
+        "mask": [mask],
+        "points": [points]
+    }
+    cleaned_data = clean_data(target_data)
+    ordered_target_pointcloud = track_state(source_pointcloud, cleaned_data["initial_points"])
+    
+    return ordered_target_pointcloud
+
 def main():
     # Initialize camera
     zed = initialize_camera()
     prev_time = time.time()
 
     # Store data
-    data = {
-        "mask": [],
-        "points": [],
-    }
+    orange_data = {}
+    blue_data = {}
 
     while True:
         # Get data
@@ -52,21 +84,43 @@ def main():
         # Store data
         if time.time() - prev_time > 1 / FPS and record_data:
             prev_time = time.time()
-            data["mask"].append(mask_blue)
-            data["points"].append(points)
+            orange_data["source_points"] = get_initial_pointcloud_order(mask_orange, points)
+            blue_data["source_points"] = get_initial_pointcloud_order(mask_blue, points)
+
+        # Quit
+        if cv2.waitKey(1) == ord(" "):
+            print("Initial states set. Begin Tracking.")
+            break
+
+    while True:
+        # Get data
+        image, depth, points = get_camera_data(zed)
+
+        # Get masked image
+        mask_orange = get_mask_orange(image)
+        mask_blue = get_mask_blue(image)
+        image_orange = get_masked_image(image, mask_orange)
+        image_blue = get_masked_image(image, mask_blue)
+
+        # Show frame
+        cv2.imshow("image", image)
+        cv2.imshow("orange", image_orange)
+        cv2.imshow("blue", image_blue)
+
+        # Store data
+        if time.time() - prev_time > 1 / FPS and record_data:
+            prev_time = time.time()
+            blue_data["target_points"] = realtime_track_state(blue_data["source_points"], mask_blue, points)
+            orange_data["target_points"] = realtime_track_state(orange_data["source_points"], mask_orange, points)
+            blue_segments = segment_shoelace(blue_data["target_points"])
+            orange_segments = segment_shoelace(orange_data["target_points"])
+            blue_data["source_points"] = blue_data["target_points"]
+            orange_data["source_points"] = orange_data["target_points"]
+
 
         # Quit
         if cv2.waitKey(1) == ord("q"):
-            cv2.imwrite("./images/test_zed.png", image)
             break
-        
-    # Save data
-    if record_data:
-        print("recording data...")
-        for key, val in data.items():
-            data[key] = np.array(val)
-        cleaned_data = clean_data(data)
-        np.savez("data/video.npz", **cleaned_data)
 
     # Close the ZED
     zed.close()
