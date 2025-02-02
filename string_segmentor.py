@@ -1,6 +1,7 @@
 from camera import *
 from data_loader import *
 from point_correspondences import *
+from planner import *
 
 import cv2
 import numpy as np
@@ -9,18 +10,35 @@ import time
 FPS = 2
 record_data = True
 
-def get_string_point(reference_pc, string_name, pos=None):
+# Store data
+orange_data = {}
+blue_data = {}
+
+def get_feature_index(string_name, reference_pc):
     """
     string_name is either "left" or "right"
-    
-    0 <= pos <= 1 is used if the reference_pc is a line (i.e. contains 2 points)
-    
-    Otherwise, this function should the xyz location of the origin of the reference_pc
-    relative to camera left optical frame.
-    
-    Return (x,y,z)
+    Return the best fit index of the feature described by reference_pc
     """
-    pass
+    target_pc = orange_data["target_points"] if string_name == "left" else blue_data["target_points"]
+    best_index = segment_shoelace(target_pc)
+    return best_index
+    
+def get_position_index(string_name, pos):
+    """
+    string_name is either "left" or "right"
+    Return the index of the position pos (0 <= pos < 1)
+    """
+    target_pc = orange_data["target_points"] if string_name == "left" else blue_data["target_points"]
+    return int(pos * len(target_pc))
+    
+def get_position_from_index(string_name, idx):
+    """
+    string_name is either "left" or "right"
+    Return the (x, y, z) position of the index idx (0 <= idx < len(string_name))
+    """
+    target_pc = orange_data["target_points"] if string_name == "left" else blue_data["target_points"]
+    return target_pc[idx]
+
 
 def get_mask_orange(image):
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -61,10 +79,6 @@ def main():
     # Initialize camera
     zed = initialize_camera()
     prev_time = time.time()
-
-    # Store data
-    orange_data = {}
-    blue_data = {}
 
     while True:
         # Get data
@@ -112,8 +126,6 @@ def main():
             prev_time = time.time()
             blue_data["target_points"] = realtime_track_state(blue_data["source_points"], mask_blue, points)
             orange_data["target_points"] = realtime_track_state(orange_data["source_points"], mask_orange, points)
-            blue_segments = segment_shoelace(blue_data["target_points"])
-            orange_segments = segment_shoelace(orange_data["target_points"])
             blue_data["source_points"] = blue_data["target_points"]
             orange_data["source_points"] = orange_data["target_points"]
 
