@@ -56,16 +56,12 @@ def get_mask_blue(image):
 def get_masked_image(image, mask):
     return cv2.bitwise_and(image, image, mask=mask)
 
-def get_initial_pointcloud_order(mask, points, quad_mask, visualize=False):
-    cleaned_points = clean_data(mask, points, quad_mask, visualize=visualize)
-    ordered_initial_points = initial_pointcloud_order(cleaned_points)
-    
+def get_initial_pointcloud_order(cleaned_points, visualize=False):
+    ordered_initial_points = initial_pointcloud_order(cleaned_points, visualize=visualize)
     return ordered_initial_points
 
-def realtime_track_state(source_pointcloud, mask, points, quad_mask, visualize=False):
-    cleaned_points = clean_data(mask, points, quad_mask, visualize=visualize)
-    ordered_target_pointcloud = track_state(source_pointcloud, cleaned_points)
-    
+def get_state(source_pointcloud, cleaned_points, visualize=False):
+    ordered_target_pointcloud = track_state(source_pointcloud, cleaned_points, visualize=visualize)
     return ordered_target_pointcloud
 
 def get_corner_points(frame):
@@ -177,8 +173,10 @@ def main():
         # Store data
         if time.time() - prev_time > 3 and record_data:
             prev_time = time.time()
-            orange_data["source_points"] = get_initial_pointcloud_order(mask_orange, points, quad_mask, visualize=True)
-            blue_data["source_points"] = get_initial_pointcloud_order(mask_blue, points, quad_mask, visualize=True)
+            cleaned_blue = clean_data(mask_blue, points, quad_mask, visualize=True)
+            cleaned_orange = clean_data(mask_orange, points, quad_mask, visualize=True)
+            orange_data["source_points"] = get_initial_pointcloud_order(cleaned_orange, visualize=True)
+            blue_data["source_points"] = get_initial_pointcloud_order(cleaned_blue, visualize=True)
 
         # Quit
         if cv2.waitKey(1) == ord("\n"):
@@ -203,11 +201,12 @@ def main():
         # Store data
         if time.time() - prev_time > 1 / FPS and record_data:
             prev_time = time.time()
-            blue_data["target_points"] = realtime_track_state(blue_data["source_points"], mask_blue, points, quad_mask, visualize=True)
-            orange_data["target_points"] = realtime_track_state(orange_data["source_points"], mask_orange, points, quad_mask, visualize=True)
+            cleaned_blue = clean_data(mask_blue, points, quad_mask, visualize=True)
+            cleaned_orange = clean_data(mask_orange, points, quad_mask, visualize=True)
+            blue_data["target_points"] = get_state(blue_data["source_points"], cleaned_blue, visualize=True)
+            orange_data["target_points"] = get_state(orange_data["source_points"], cleaned_orange, visualize=True)
             blue_data["source_points"] = blue_data["target_points"]
             orange_data["source_points"] = orange_data["target_points"]
-
 
         # Quit
         if cv2.waitKey(1) == ord("q"):
