@@ -7,8 +7,8 @@ from sklearn.decomposition import PCA
 from scipy.optimize import curve_fit
 from enum import Enum
 
-TEST_TEMPLATE = np.array([[-2, 4], [-1, 1], [0, 0.1], [1, 1], [2, 4]])
-WINDOW_SIZE = 5
+TEST_TEMPLATE = np.array([[-2, 4], [-1, 1], [0, 0], [0, 0], [1, 1], [2, 4]])
+WINDOW_SIZE = 3
 
 class SegmentType(Enum):
     SEGMENT = "tan" # cool but boring color
@@ -22,24 +22,45 @@ def template_curve(x, a, b, c):
     """ Quadratic function to fit the template shape. """
     return a * x**2 + b * x + c
 
-def pca_align(points):
-    """ Aligns points using PCA and returns transformed points + rotation matrix. """
-    mean = np.mean(points, axis=0)
-    centered = points - mean
-    U, S, Vt = np.linalg.svd(centered)
-    return centered @ Vt.T, Vt  # Rotate to align principal axes
+# def pca_align(points):
+#     """ Aligns points using PCA and returns transformed points + rotation matrix. """
+#     mean = np.mean(points, axis=0)
+#     centered = points - mean
+#     U, S, Vt = np.linalg.svd(centered)
+#     return centered @ Vt.T, Vt  # Rotate to align principal axes
 
 def embed_template_3d(template_points):
     """ Embeds a 2D template into 3D space by assuming it lies in the XY plane. """
     return np.hstack((template_points, np.zeros((template_points.shape[0], 1))))
 
-def project_to_plane(points, plane_origin, plane_normal):
-    """ Projects points onto a plane defined by an origin and normal vector. """
-    normal = plane_normal / np.linalg.norm(plane_normal)
-    vectors = points - plane_origin
-    distances = np.dot(vectors, normal)
-    projected = points - np.outer(distances, normal)
-    return projected
+# def project_to_plane(points, plane_origin, plane_normal):
+#     """ Projects points onto a plane defined by an origin and normal vector. """
+#     normal = plane_normal / np.linalg.norm(plane_normal)
+#     vectors = points - plane_origin
+#     distances = np.dot(vectors, normal)
+#     projected = points - np.outer(distances, normal)
+#     return projected
+
+def find_optimal_rotation(scatter_points, curve_points):
+    # Center the points
+    # scatter_centered = scatter_points - np.mean(scatter_points, axis=0)
+    # curve_centered = curve_points - np.mean(curve_points, axis=0)
+    
+    # Compute cross-covariance matrix
+    H = np.dot(scatter_points.T, curve_points)
+    
+    # Perform SVD
+    U, S, Vt = np.linalg.svd(H)
+    
+    # Compute rotation matrix
+    R = np.dot(Vt.T, U.T)
+    
+    # Ensure proper rotation (det(R) = 1)
+    if np.linalg.det(R) < 0:
+        Vt[-1,:] *= -1
+        R = np.dot(Vt.T, U.T)
+    
+    return R
 
 def match_template(pointcloud, template, window_size, error_threshold=float('inf'), visualize=False):
     best_match = None
@@ -47,33 +68,22 @@ def match_template(pointcloud, template, window_size, error_threshold=float('inf
 
     # Embed 2D template into 3D
     template_3d = embed_template_3d(template)
-    
-    # Align the template to its principal axes
-    template_aligned, template_rotation = pca_align(template_3d)
-    template_normal = template_rotation[-1]  # Plane normal
-    template_origin = np.mean(template_3d, axis=0)
-    
-    # Project the template to its own plane
-    template_projected = project_to_plane(template_aligned, template_origin, template_normal)
-    x_template = template_projected[:, 0]
-    y_template = template_projected[:, 1]
+    template_3d_normalized, _, _ = normalize_pointcloud(template_3d)
+    x_template = template_3d_normalized[:, 0]
+    y_template = template_3d_normalized[:, 1]
     params, _ = curve_fit(template_curve, x_template, y_template)
     print(params)
 
     # Sliding window search
     for i in range(window_size, len(pointcloud) - window_size + 1):
         window = pointcloud[i-window_size:i+window_size]
+        window_normalized, _, _ = normalize_pointcloud(window)
 
-        # Align window to PCA frame
-        window_aligned, window_rotation = pca_align(window)
-        window_normal = window_rotation[-1]  # Window plane normal
-        window_origin = np.mean(window, axis=0)
+        window_rotation = find_optimal_rotation(window_normalized, template_3d_normalized)
+        rotated_window = window_normalized @ window_rotation.T
 
-        # Project window onto its own plane
-        projected_window = project_to_plane(window_aligned, window_origin, window_normal)
-        x_window = projected_window[:, 0]
-        y_window = projected_window[:, 1]
-
+        x_window = rotated_window[:, 0]
+        y_window = rotated_window[:, 1]
         # Fit the template curve to the window
         y_fitted = template_curve(x_window, *params)
         error = np.sum((y_window - y_fitted) ** 2)
@@ -84,13 +94,15 @@ def match_template(pointcloud, template, window_size, error_threshold=float('inf
             
             if visualize:
                 # Plot best match
-                plt.figure(figsize=(6, 4))
-                plt.plot(x_window, y_window, 'bo-', label="Window Points")
-                plt.plot(x_window, y_fitted, 'r-', label="Fitted Curve")
-                plt.legend()
-                plt.title(f"Best Match at index {i} (Error: {best_error:.2f})")
-                plt.xlabel("X")
-                plt.ylabel("Y")
+                fig = plt.figure(figsize=(6, 6))
+                ax = fig.add_subplot(111, projection='3d')
+                ax.plot(x_window, y_window, 'bo-', label="Window Points")
+                ax.plot(x_window, y_fitted, 'r-', label="Fitted Curve")
+                ax.legend()
+                ax.set_title(f"Best Match at index {i} (Error: {best_error:.2f})")
+                ax.set_xlabel("X")
+                ax.set_ylabel("Y")
+                ax.set_zlabel("Z")
                 plt.show()
     
     return best_match, best_error
@@ -140,12 +152,16 @@ if __name__ == "__main__":
         cleaned_data['points'].append(clean_data(data['mask'][i], data['points'][i], quad_mask))
     source_pointcloud = cleaned_data['initial_points']
     source_pointcloud = initial_pointcloud_order(source_pointcloud)
-    segments = pointcloud_to_segments(source_pointcloud, visualize=True)
+    segments = pointcloud_to_segments(source_pointcloud, visualize=False)
     visualize_segments(source_pointcloud, segments)
 
     for i in range(len(cleaned_data['points'])):
         target_pointcloud = cleaned_data['points'][i]
         ordered_target_pointcloud = track_state(source_pointcloud, target_pointcloud, visualize=False)
-        segments = pointcloud_to_segments(ordered_target_pointcloud, visualize=True)
+        if i < 5:
+            visualize = False
+        else:
+            visualize = True
+        segments = pointcloud_to_segments(ordered_target_pointcloud, visualize=visualize)
         visualize_segments(ordered_target_pointcloud, segments)
         source_pointcloud = ordered_target_pointcloud
