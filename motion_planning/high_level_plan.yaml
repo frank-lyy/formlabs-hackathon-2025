@@ -5,7 +5,7 @@
 # l_target_pose and r_target_pose are executable python code. Their ultimate
 # output should be RigidTransform() objects stored in l_target_pose and r_target_pose variables.
 # They assume access to:
-#     - get_feature_idx
+#     - get_feature_index
 #     - get_position_index
 #     - get_position_from_index
 #     - p (instance of HighLevelPlanner)
@@ -94,7 +94,7 @@ steps:
       l_target_pose = l_current_pose
     r_target_pose: |
       r_current_pose = plant.CalcRelativeTransform(plant_context, plant.world_frame(), right_eef_frame)
-      r_bend_idx = get_feature_idx("right", right_reference_point_cloud)
+      r_bend_idx = get_feature_index("right", right_reference_point_cloud)
       r_source_idx = get_position_index("right", 0)
       r_target_idx = int((r_bend_idx + r_source_idx) / 2)
       r_target_position = p.transform_point_camera_to_world_frame(get_position_from_index("right", r_target_idx))

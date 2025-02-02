@@ -95,32 +95,6 @@ simulator.AdvanceTo(0.0001)
 
 traj_zero_time = 0
 
-# TEMPORARY
-# (Left, Right)
-X_Goal_seq = [(
-                  RigidTransform(RotationMatrix.MakeYRotation(np.pi/2), np.array([0, -0.5, 0.015])),
-                  RigidTransform(RotationMatrix.MakeYRotation(np.pi/2), np.array([-0.2, -0.5, 0.015]))
-              ),
-              (
-                  RigidTransform(RotationMatrix.MakeYRotation(np.pi/2), np.array([0, -0.6, 0.015])),
-                  RigidTransform(RotationMatrix.MakeZRotation(np.pi/2) @ RotationMatrix.MakeYRotation(np.pi/2), np.array([-0.1, -0.4, 0.015]))
-              ),
-              (
-                  RigidTransform(RotationMatrix.MakeZRotation(np.pi/2) @ RotationMatrix.MakeYRotation(np.pi/2), np.array([0.2, -0.4, 0.015])),
-                  RigidTransform(RotationMatrix.MakeYRotation(np.pi/2), np.array([-0.3, -0.5, 0.015]))
-              ),
-              (
-                  RigidTransform(RotationMatrix.MakeZRotation(np.pi/2) @ RotationMatrix.MakeYRotation(np.pi/2), np.array([0.2, -0.4, 0.015])),
-                  RigidTransform(RotationMatrix.MakeZRotation(np.pi/2) @ RotationMatrix.MakeYRotation(np.pi/2), np.array([0, -0.4, 0.015]))
-              )]
-# (Left, Right)
-open_close_seq = [(1, 1), (0, 0), (1, 1), (0, 0)]  # 1 = close, 0 = open
-
-def get_next_action():
-    if action_idx >= len(X_Goal_seq):
-        return None, None, None, None
-    return X_Goal_seq[action_idx][0], X_Goal_seq[action_idx][1], open_close_seq[action_idx][0], open_close_seq[action_idx][1]
-
 action_idx = 0
 prev_open_close = (0, 0)  # open
 while True:
@@ -193,8 +167,7 @@ while True:
     print("FINISHED OPEN/CLOSE")
     print("===================================================================")
     traj_zero_time = context.get_time()
-        
-    action_idx += 1
+
     prev_open_close = (open_close_L, open_close_R)
     
 time.sleep(3)
