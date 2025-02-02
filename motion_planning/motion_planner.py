@@ -55,9 +55,9 @@ def VisualizePath(meshcat, plant, frame, traj, name):
         
         
 def KinematicTrajOpt(plant, plant_context, endowrist_model_instance_idx, frame_name, 
-                     frame_model_instance_idx, wrist_joint_idx, X_Start, X_Goal, open_close,
-                     acceptable_pos_err=0.001, acceptable_angle_error=0.05, acceptable_vel_err=0.01) -> BsplineTrajectory:    
-    frame = plant.GetFrameByName(frame_name, frame_model_instance_idx)
+                     wrist_joint_idx, X_Start, X_Goal, open_close, acceptable_pos_err=0.001, 
+                     acceptable_angle_error=0.05, acceptable_vel_err=0.01) -> BsplineTrajectory:    
+    frame = plant.GetFrameByName(frame_name, endowrist_model_instance_idx)
     
     trajopt = KinematicTrajectoryOptimization(plant.num_positions(), 8)  # 8 control points in Bspline
     prog = trajopt.get_mutable_prog()
@@ -127,7 +127,7 @@ def KinematicTrajOpt(plant, plant_context, endowrist_model_instance_idx, frame_n
     
     # Zero final velocity constraint
     plant_autodiff = plant.ToAutoDiffXd()
-    frame_autodiff = plant_autodiff.GetFrameByName(frame_name, frame_model_instance_idx)
+    frame_autodiff = plant_autodiff.GetFrameByName(frame_name, endowrist_model_instance_idx)
     final_vel_constraint = SpatialVelocityConstraint(
         plant_autodiff,
         plant_autodiff.world_frame(),
@@ -177,16 +177,14 @@ def KinematicTrajOpt(plant, plant_context, endowrist_model_instance_idx, frame_n
     return final_traj
 
 
-def CloseGripper(plant, plant_context, endowrist_model_instance_idx, duration=0.5) -> PiecewisePolynomial:
-    current_plant_positions = plant.GetPositions(plant_context)
-    
+def CloseGripper(plant, endowrist_model_instance_idx, joint_positions_at_close, duration=0.5) -> PiecewisePolynomial:   
     forcep1_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep1", endowrist_model_instance_idx).position_start()
     forcep2_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep2", endowrist_model_instance_idx).position_start()
     
-    current_forcep1_angle = current_plant_positions[forcep1_idx]
-    current_forcep2_angle = current_plant_positions[forcep2_idx]
+    current_forcep1_angle = joint_positions_at_close[forcep1_idx]
+    current_forcep2_angle = joint_positions_at_close[forcep2_idx]
     target_forcep_angle = (current_forcep1_angle + current_forcep2_angle) / 2  # grippers close when they have the same angle
-    target_plant_positions = current_plant_positions.copy()
+    target_plant_positions = joint_positions_at_close.copy()
     target_plant_positions[forcep1_idx] = target_forcep_angle
     target_plant_positions[forcep2_idx] = target_forcep_angle
     
@@ -195,7 +193,7 @@ def CloseGripper(plant, plant_context, endowrist_model_instance_idx, duration=0.
     times = np.linspace(0, duration, num_samples)
 
     # Initialize trajectory array: all joints remain constant except the forceps
-    traj_values = np.tile(current_plant_positions[:, np.newaxis], num_samples)  # Shape (num_positions, num_samples)
+    traj_values = np.tile(joint_positions_at_close[:, np.newaxis], num_samples)  # Shape (num_positions, num_samples)
 
     # Modify the forceps positions over time
     traj_values[forcep1_idx, :] = np.linspace(current_forcep1_angle, target_forcep_angle, num_samples)
@@ -206,14 +204,12 @@ def CloseGripper(plant, plant_context, endowrist_model_instance_idx, duration=0.
     return trajectory
 
 
-def OpenGripper(plant, plant_context, endowrist_model_instance_idx, duration=0.5) -> PiecewisePolynomial:
-    current_plant_positions = plant.GetPositions(plant_context)
-    
+def OpenGripper(plant, endowrist_model_instance_idx, joint_positions_at_open, duration=0.5) -> PiecewisePolynomial:   
     forcep1_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep1", endowrist_model_instance_idx).position_start()
     forcep2_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep2", endowrist_model_instance_idx).position_start()
     
-    current_forcep1_angle = current_plant_positions[forcep1_idx]
-    current_forcep2_angle = current_plant_positions[forcep2_idx]
+    current_forcep1_angle = joint_positions_at_open[forcep1_idx]
+    current_forcep2_angle = joint_positions_at_open[forcep2_idx]
     
     target_forcep1_angle = current_forcep1_angle + gripper_open_angle/2
     target_forcep2_angle = current_forcep2_angle - gripper_open_angle/2
@@ -223,7 +219,7 @@ def OpenGripper(plant, plant_context, endowrist_model_instance_idx, duration=0.5
     times = np.linspace(0, duration, num_samples)
 
     # Initialize trajectory array: all joints remain constant except the forceps
-    traj_values = np.tile(current_plant_positions[:, np.newaxis], num_samples)  # Shape (num_positions, num_samples)
+    traj_values = np.tile(joint_positions_at_open[:, np.newaxis], num_samples)  # Shape (num_positions, num_samples)
 
     # Modify the forceps positions over time
     traj_values[forcep1_idx, :] = np.linspace(current_forcep1_angle, target_forcep1_angle, num_samples)
@@ -232,3 +228,24 @@ def OpenGripper(plant, plant_context, endowrist_model_instance_idx, duration=0.5
     # Create a piecewise polynomial trajectory for the entire plant
     trajectory = PiecewisePolynomial.FirstOrderHold(times, traj_values)
     return trajectory
+
+
+def CombineTrajectories(trajectories) -> CompositeTrajectory:
+    composite_segments = []
+    current_time = 0.0
+    
+    for traj in trajectories:
+        # Create time scaling to shift trajectory to start at current_time
+        time_scaling = PiecewisePolynomial.FirstOrderHold(
+            [current_time, current_time + traj.end_time()],
+            np.array([[0, traj.end_time()-traj.start_time()]])
+        )
+        
+        # Create time-shifted trajectory segment
+        shifted_traj = PathParameterizedTrajectory(traj, time_scaling)
+        composite_segments.append(shifted_traj)
+        
+        # Update time for next trajectory (add trajectory duration plus gap)
+        current_time += traj.end_time()
+    
+    return CompositeTrajectory(composite_segments)
