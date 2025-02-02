@@ -4,30 +4,33 @@
 
 # l_target_pose and r_target_pose are executable python code. Their ultimate
 # output should be RigidTransform() objects stored in l_target_pose and r_target_pose variables.
-# They assume that functions GetStringPoint(i) (0 <= i <= 1; 0 = string source, 1 = string end) 
-# is defined, and that variables left_eef_frame and right_eef_frame are available. They
-# also assume that variables left_reference_point_cloud and right_reference_point_cloud
+# They assume access to:
+#     - get_feature_index
+#     - get_position_index
+#     - get_position_from_index
+#     - p (instance of HighLevelPlanner)
+#     - p.transform_point_camera_to_world_frame
+#     - plant and plant_context
+#     - left_eef_frame and right_eef_frame. 
+# They also assume that variables left_reference_point_cloud and right_reference_point_cloud
 # are generated (np.array(step["left/right_reference_point_cloud"])) prior to executing the 
 # l_target_pose and r_target_pose code.
 
 # l_open_close and r_open_close are 1 if the gripper should close after reach the target location, 0 if the gripper should open
 
-# If left/right_reference_point_cloud is None: Assume we do not have to manipulate this string during this step.
-# (or it can be left as none if it's simply not used in the l_target_pose and r_target_pose code for a particular step)
+# left/right_reference_point_cloud can be left as none if it's not used in the l_target_pose and r_target_pose code for a particular step
 
 steps:
   - step_id: 0
     description: "Grab right string"
     left_reference_point_cloud: None
-    right_reference_point_cloud: 
-      - [0, 0]
-      - [0, 0]
+    right_reference_point_cloud: None
     l_target_pose: |
-      l_target_position = GetStringPoint(right_reference_point_cloud, "right", 0.95)
-      l_target_pose = RigidTransform(RotationMatrix() @ RotationMatrix.MakeYRotation(np.pi/2), l_target_position)
-    r_target_pose: 
-      r_target_position = GetStringPoint(right_reference_point_cloud, "right", 0.5)
-      r_target_pose = RigidTransform(RotationMatrix() @ RotationMatrix.MakeYRotation(np.pi/2), r_target_position)
+      l_target_position = p.transform_point_camera_to_world_frame(get_position_from_index("right", get_position_index("right", 0.95)))
+      l_target_pose = RigidTransform(RotationMatrix.MakeYRotation(np.pi/2), l_target_position)
+    r_target_pose: |
+      r_target_position = p.transform_point_camera_to_world_frame(get_position_from_index("right", get_position_index("right", 0.5)))
+      r_target_pose = RigidTransform(RotationMatrix.MakeYRotation(np.pi/2), r_target_position)
     l_open_close: 1  # close
     r_open_close: 1  # close
 
@@ -48,22 +51,91 @@ steps:
 
   - step_id: 2
     description: "Grab left string"
-    left_reference_point_cloud: 
-      - [0, 0]
-      - [0, 0]
+    left_reference_point_cloud: None
     right_reference_point_cloud: None
     l_target_pose: |
-      l_target_position = GetStringPoint(left_reference_point_cloud, "left", 0.6)
-      l_target_pose = RigidTransform(RotationMatrix() @ RotationMatrix.MakeYRotation(np.pi/2), l_target_position)
-    r_target_pose: 
-      r_target_position = GetStringPoint(left_reference_point_cloud, "left", 0.5)
-      r_target_pose = RigidTransform(RotationMatrix() @ RotationMatrix.MakeYRotation(np.pi/2), r_target_position)
+      l_target_position = p.transform_point_camera_to_world_frame(get_position_from_index("left", get_position_index("left", 0.6)))
+      l_target_pose = RigidTransform(RotationMatrix.MakeYRotation(np.pi/2), l_target_position)
+    r_target_pose: |
+      r_target_position = p.transform_point_camera_to_world_frame(get_position_from_index("left", get_position_index("left", 0.95)))
+      r_target_pose = RigidTransform(RotationMatrix.MakeYRotation(np.pi/2), r_target_position)
+    l_open_close: 1  # close
+    r_open_close: 1  # close
 
-  - step_id: 
-    description: "Bend right string 90 deg"
+  - step_id: 3
+    description: "Bend right string over left string to prepare for basic knot"
+    left_reference_point_cloud: None
+    right_reference_point_cloud: None
+    l_target_pose: |
+      l_current_pose = plant.CalcRelativeTransform(plant_context, plant.world_frame(), left_eef_frame)
+      print(f"plant.GetPositions(plant_context): {plant.GetPositions(plant_context)}")
+      l_target_pose = l_current_pose
+    r_target_pose: |
+      l_current_pose = plant.CalcRelativeTransform(plant_context, plant.world_frame(), left_eef_frame)
+      r_current_pose = plant.CalcRelativeTransform(plant_context, plant.world_frame(), right_eef_frame)
+      string_length = np.linalg.norm(l_current_pose.translation() - r_current_pose.translation())
+      r_target_direction = np.array([-1, np.sqrt(3) + 2, 0])  # 15-75-90 triangle
+      r_target_direction = r_target_direction / np.linalg.norm(r_target_direction)
+      # Need gripper to rotate a fully 180 degrees to turn the string around
+      r_target_pose = RigidTransform(RotationMatrix().MakeZRotation(np.pi) @ RotationMatrix.MakeYRotation(np.pi/2), l_current_pose.translation() + string_length * r_target_direction)
+    l_open_close: 1  # close -- left can stay grasping the string since left isn't used at the next step
+    r_open_close: 0  # open
+
+  - step_id: 4
+    description: "Grab right string to prepare to put right string over left string"
     left_reference_point_cloud: None
     right_reference_point_cloud:  # 90 deg bend
       - [1, 0]
       - [0, 0]
       - [0, 1]
+    l_target_pose: |
+      l_current_pose = plant.CalcRelativeTransform(plant_context, plant.world_frame(), left_eef_frame)
+      print(f"plant.GetPositions(plant_context): {plant.GetPositions(plant_context)}")
+      l_target_pose = l_current_pose
+    r_target_pose: |
+      r_current_pose = plant.CalcRelativeTransform(plant_context, plant.world_frame(), right_eef_frame)
+      r_bend_idx = get_feature_index("right", right_reference_point_cloud)
+      r_source_idx = get_position_index("right", 0)
+      r_target_idx = int((r_bend_idx + r_source_idx) / 2)
+      r_target_position = p.transform_point_camera_to_world_frame(get_position_from_index("right", r_target_idx))
+      r_target_pose = RigidTransform(RotationMatrix.MakeYRotation(np.pi/2), r_target_position)
+    l_open_close: 1  # close
+    r_open_close: 1  # close
 
+  - step_id: 5
+    description: "Put right string over left string"
+    left_reference_point_cloud: None
+    right_reference_point_cloud: None
+    l_target_pose: |
+      l_current_pose = plant.CalcRelativeTransform(plant_context, plant.world_frame(), left_eef_frame)
+      print(f"plant.GetPositions(plant_context): {plant.GetPositions(plant_context)}")
+      l_target_pose = l_current_pose
+    r_target_pose: |
+      r_current_pose = plant.CalcRelativeTransform(plant_context, plant.world_frame(), right_eef_frame)
+      r_target_pose = RigidTransform(r_current_pose.rotation(), r_current_pose.translation() + [0.0762, 0, 0])
+    l_open_close: 0  # open
+    r_open_close: 0  # open
+
+  - step_id: 6
+    description: "Grab both strings before pulling to finish basic knot"
+    left_reference_point_cloud: None
+    right_reference_point_cloud: None
+    l_target_pose: |
+      l_target_position = p.transform_point_camera_to_world_frame(get_position_from_index("left", get_position_index("left", 0.95)))
+      l_target_pose = RigidTransform(RotationMatrix.MakeZRotation(np.pi/2) @ RotationMatrix.MakeYRotation(np.pi/2), l_target_position)
+    r_target_pose: |
+      r_target_position = p.transform_point_camera_to_world_frame(get_position_from_index("right", get_position_index("right", 0.95)))
+      r_target_pose = RigidTransform(RotationMatrix.MakeYRotation(np.pi/2), r_target_position)
+    l_open_close: 1  # close
+    r_open_close: 1  # close
+
+  - step_id: 7
+    description: "Pull both strings to finish basic knot"
+    left_reference_point_cloud: None
+    right_reference_point_cloud: None
+    l_target_pose: |  # hard-coded pull apart positions
+      l_target_pose = RigidTransform(RotationMatrix.MakeZRotation(np.pi/2) @ RotationMatrix.MakeYRotation(np.pi/2), [0.36195, -0.3048, 0.015])
+    r_target_pose: |
+      r_target_pose = RigidTransform(RotationMatrix.MakeZRotation(np.pi/2) @ RotationMatrix.MakeYRotation(np.pi/2), [-0.36195, -0.3048, 0.015])
+    l_open_close: 1  # close
+    r_open_close: 1  # close

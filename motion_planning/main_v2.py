@@ -19,6 +19,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from motion_utils import get_left_right_joint_indices
 from motion_planner import KinematicTrajOpt, VisualizePath, CloseGripper, OpenGripper, CombineTrajectories
+from high_level_planner import HighLevelPlanner
 
 import numpy as np
 np.set_printoptions(linewidth=200)  # Set the line width to 200 characters
@@ -66,7 +67,7 @@ AddMultibodyTriad(left_eef_frame, scene_graph, length=0.05, radius=0.001, opacit
 AddMultibodyTriad(right_eef_frame, scene_graph, length=0.05, radius=0.001, opacity=0.5)
 
 # Visualize zed2i camera transform
-AddMultibodyTriad(plant.GetFrameByName("zed2i_left_camera_optical_frame"), scene_graph, length=0.05, radius=0.001, opacity=0.5)
+AddMultibodyTriad(plant.GetFrameByName("zed2i_left_camera_optical_frame"), scene_graph, length=0.7, radius=0.001, opacity=0.5)
 
 plant.Finalize()
 
@@ -78,9 +79,6 @@ right_wrist_joint_idx = plant.GetJointByName("joint_wrist_right_endowrist_right"
 left_arm_joint_indices, right_arm_joint_indices = get_left_right_joint_indices(plant, endowrist_left_model_instance_idx, 
                                                                               endowrist_right_model_instance_idx, arms_model_instance_idx)
 
-print(f"Left arm joint indices: {left_arm_joint_indices}")
-print(f"Right arm joint indices: {right_arm_joint_indices}")
-
 AddDefaultVisualization(robot_diagram_builder.builder(), meshcat=meshcat)
 diagram = robot_diagram_builder.Build()
 
@@ -90,56 +88,36 @@ simulator = Simulator(diagram)
 context = simulator.get_mutable_context()
 plant_context = plant.GetMyMutableContextFromRoot(context)
 
+high_level_planner = HighLevelPlanner(plant, plant_context, left_eef_frame, right_eef_frame)
+
 meshcat.StartRecording()
 simulator.AdvanceTo(0.0001)
 
 traj_zero_time = 0
 
-# TEMPORARY
-# (Left, Right)
-X_Goal_seq = [(
-                  RigidTransform(RotationMatrix.MakeYRotation(np.pi/2), np.array([0, -0.5, 0.015])),
-                  RigidTransform(RotationMatrix.MakeYRotation(np.pi/2), np.array([-0.2, -0.5, 0.015]))
-              ),
-              (
-                  RigidTransform(RotationMatrix.MakeYRotation(np.pi/2), np.array([0, -0.6, 0.015])),
-                  RigidTransform(RotationMatrix.MakeZRotation(np.pi/2) @ RotationMatrix.MakeYRotation(np.pi/2), np.array([-0.1, -0.4, 0.015]))
-              ),
-              (
-                  RigidTransform(RotationMatrix.MakeZRotation(np.pi/2) @ RotationMatrix.MakeYRotation(np.pi/2), np.array([0.2, -0.4, 0.015])),
-                  RigidTransform(RotationMatrix.MakeYRotation(np.pi/2), np.array([-0.3, -0.5, 0.015]))
-              ),
-              (
-                  RigidTransform(RotationMatrix.MakeZRotation(np.pi/2) @ RotationMatrix.MakeYRotation(np.pi/2), np.array([0.2, -0.4, 0.015])),
-                  RigidTransform(RotationMatrix.MakeZRotation(np.pi/2) @ RotationMatrix.MakeYRotation(np.pi/2), np.array([0, -0.4, 0.015]))
-              )]
-# (Left, Right)
-open_close_seq = [(1, 1), (0, 0), (1, 1), (0, 0)]  # 1 = close, 0 = open
-
-def get_next_action():
-    if action_idx >= len(X_Goal_seq):
-        return None, None, None, None
-    return X_Goal_seq[action_idx][0], X_Goal_seq[action_idx][1], open_close_seq[action_idx][0], open_close_seq[action_idx][1]
-
 action_idx = 0
 prev_open_close = (0, 0)  # open
 while True:
-    X_Goal_L, X_Goal_R, open_close_L, open_close_R = get_next_action()
+    X_Goal_L, X_Goal_R, open_close_L, open_close_R = high_level_planner.get_next_action()
     if X_Goal_L is None:
         break
     
-    AddMeshcatTriad(meshcat, f"X_Goal{action_idx}L", X_PT=X_Goal_L, length=0.01, radius=0.001, opacity=0.5)
-    AddMeshcatTriad(meshcat, f"X_Goal{action_idx}R", X_PT=X_Goal_R, length=0.01, radius=0.001, opacity=0.5)
+    action_idx = high_level_planner.step_num
+    
+    AddMeshcatTriad(meshcat, f"X/X_Goal{action_idx}L", X_PT=X_Goal_L, length=0.01, radius=0.001, opacity=0.5)
+    AddMeshcatTriad(meshcat, f"X/X_Goal{action_idx}R", X_PT=X_Goal_R, length=0.01, radius=0.001, opacity=0.5)
     
     X_Start_L = plant.CalcRelativeTransform(plant_context, plant.world_frame(), left_eef_frame)
     X_Start_R = plant.CalcRelativeTransform(plant_context, plant.world_frame(), right_eef_frame)
     
+    print("GENERATING TRAJS")
+    print(f"current pos: {plant.GetPositions(plant_context)}")
     trajL = KinematicTrajOpt(plant, plant_context, endowrist_left_model_instance_idx, "endowrist_forcep1", 
-                             left_wrist_joint_idx, X_Start_L, X_Goal_L, prev_open_close[0], open_close_L)
+                             left_wrist_joint_idx, X_Start_L, X_Goal_L, prev_open_close[0])
     trajR = KinematicTrajOpt(plant, plant_context, endowrist_right_model_instance_idx, "endowrist_forcep1", 
-                             right_wrist_joint_idx, X_Start_R, X_Goal_R, prev_open_close[1], open_close_R)
-    VisualizePath(meshcat, plant, left_eef_frame, trajL, f"traj{action_idx}L")
-    VisualizePath(meshcat, plant, right_eef_frame, trajR, f"traj{action_idx}R")
+                             right_wrist_joint_idx, X_Start_R, X_Goal_R, prev_open_close[1])
+    VisualizePath(meshcat, plant, left_eef_frame, trajL, f"trajs/traj{action_idx}L")
+    VisualizePath(meshcat, plant, right_eef_frame, trajR, f"trajs/traj{action_idx}R")
     
     if open_close_L:
         traj2L = CloseGripper(plant, endowrist_left_model_instance_idx, trajL.value(trajL.end_time()).flatten())
@@ -153,7 +131,7 @@ while True:
     else:  # If opening gripper, open after both arms reach goal
         traj2R = OpenGripper(plant, endowrist_right_model_instance_idx, trajR.value(trajR.end_time()).flatten())
 
-    while context.get_time() - traj_zero_time < max(trajL.end_time(), trajR.end_time()):           
+    while context.get_time() - traj_zero_time < max(trajL.end_time(), trajR.end_time()):
         q_L = trajL.value(context.get_time() - traj_zero_time).flatten()
         q_R = trajR.value(context.get_time() - traj_zero_time).flatten()
         
@@ -171,8 +149,9 @@ while True:
     
     # Run secondary trajectory for opening the gripper after both arms have reached their goals
     if not open_close_L or not open_close_R:
+        start_positions = plant.GetPositions(plant_context)
         while context.get_time() - traj_zero_time < max(traj2L.end_time(), traj2R.end_time()):
-            q_combined = np.zeros(14)
+            q_combined = start_positions
             if not open_close_L:
                 q_L = traj2L.value(context.get_time() - traj_zero_time).flatten()
                 q_combined[left_arm_joint_indices] = q_L[left_arm_joint_indices]
@@ -187,8 +166,7 @@ while True:
     print("FINISHED OPEN/CLOSE")
     print("===================================================================")
     traj_zero_time = context.get_time()
-        
-    action_idx += 1
+
     prev_open_close = (open_close_L, open_close_R)
     
 time.sleep(3)

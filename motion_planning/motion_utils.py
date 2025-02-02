@@ -35,7 +35,7 @@ def diagram_visualize_connections(diagram: Diagram, file: Union[BinaryIO, str]) 
     file.write(svg_data)
     
 
-def ik(plant, plant_context, frame, pose, rotation_offset=RotationMatrix(), translation_error=0, rotation_error=0.05, regions=None, pose_as_constraint=True) -> tuple[np.ndarray, bool]:
+def ik(plant, frame, pose, rotation_offset=RotationMatrix(), translation_error=0, rotation_error=0.05, regions=None, pose_as_constraint=True) -> tuple[np.ndarray, bool]:
     """
     Use Inverse Kinematics to solve for a configuration that satisfies a
     task-space pose for a given frame. 
@@ -60,7 +60,7 @@ def ik(plant, plant_context, frame, pose, rotation_offset=RotationMatrix(), tran
     ik_start = time.time()
     solve_success = False
     for region in list(regions.values()):
-        ik = InverseKinematics(plant, plant_context)
+        ik = InverseKinematics(plant, plant.CreateDefaultContext())
         q_variables = ik.q()  # Get variables for MathematicalProgram
         ik_prog = ik.get_mutable_prog()
 
@@ -101,7 +101,7 @@ def ik(plant, plant_context, frame, pose, rotation_offset=RotationMatrix(), tran
         ik_result = Solve(ik_prog)
         if ik_result.is_success():
             q = ik_result.GetSolution(q_variables)  # (6,) np array
-            print(f"IK solve succeeded. q: {q}")
+            # print(f"IK solve succeeded. q: {q}")
             solve_success = True
             break
         # else:
