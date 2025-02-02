@@ -14,10 +14,10 @@ Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
 #define SERVOMAX        600
 
 // Motor Outputs on PCA9685 board
-#define SERVO_A_ID 0
-#define SERVO_B_ID 1
-#define SERVO_C_ID 2
-#define SERVO_D_ID 3
+#define SERVO_A_ID 4
+#define SERVO_B_ID 5
+#define SERVO_C_ID 6
+#define SERVO_D_ID 7
 
 const int analogInPin = A0;
 
