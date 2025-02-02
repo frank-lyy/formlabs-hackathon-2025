@@ -16,8 +16,5 @@ drake==1.37.0
 manipulation
 IPython
 scikit-learn==1.6.1
-<<<<<<< HEAD
 pyzed
-=======
 fastdtw==0.3.4
->>>>>>> 582677e8f3d3f5bde09dd9205468b05a02a61d3a
