@@ -16,3 +16,4 @@ drake==1.37.0
 manipulation
 IPython
 scikit-learn==1.6.1
+fastdtw==0.3.4

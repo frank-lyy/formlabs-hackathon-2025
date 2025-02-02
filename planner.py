@@ -1,14 +1,16 @@
 from point_correspondences import *
 
 import numpy as np
-from scipy.spatial import KDTree
-from scipy.signal import savgol_filter
-from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
+from scipy.spatial.transform import Rotation as R
+from scipy.interpolate import splprep, splev
+from fastdtw import fastdtw
+from scipy.spatial.distance import euclidean
 from enum import Enum
 
-TEST_TEMPLATE = np.array([[-2, 4], [-1, 1], [0, 0], [0, 0], [1, 1], [2, 4]])
-WINDOW_SIZE = 3
+TEST_TEMPLATE = np.array([[-1, 0], [0, 0], [0, 1]])  # 90-degree bend
+WINDOW_SIZE = 10
 
 class SegmentType(Enum):
     SEGMENT = "tan" # cool but boring color
@@ -18,91 +20,60 @@ class SegmentType(Enum):
     def color(segment_type):
         return segment_type.value
 
+# Curve fitting function
 def template_curve(x, a, b, c):
-    """ Quadratic function to fit the template shape. """
     return a * x**2 + b * x + c
 
-# def pca_align(points):
-#     """ Aligns points using PCA and returns transformed points + rotation matrix. """
-#     mean = np.mean(points, axis=0)
-#     centered = points - mean
-#     U, S, Vt = np.linalg.svd(centered)
-#     return centered @ Vt.T, Vt  # Rotate to align principal axes
+# Fit a spline through given points
+def fit_spline(points, degree=2):
+    tck, _ = splprep(points.T, s=0, k=degree)
+    return tck
 
-def embed_template_3d(template_points):
-    """ Embeds a 2D template into 3D space by assuming it lies in the XY plane. """
-    return np.hstack((template_points, np.zeros((template_points.shape[0], 1))))
+# Evaluate a spline at given points
+def evaluate_spline(tck, num_points=100):
+    u = np.linspace(0, 1, num_points)
+    return np.array(splev(u, tck)).T
 
-# def project_to_plane(points, plane_origin, plane_normal):
-#     """ Projects points onto a plane defined by an origin and normal vector. """
-#     normal = plane_normal / np.linalg.norm(plane_normal)
-#     vectors = points - plane_origin
-#     distances = np.dot(vectors, normal)
-#     projected = points - np.outer(distances, normal)
-#     return projected
+# Compute DTW distance between two curves
+def dtw_distance(curve1, curve2):
+    distance, _ = fastdtw(curve1, curve2, dist=euclidean)
+    return distance
 
-def find_optimal_rotation(scatter_points, curve_points):
-    # Center the points
-    # scatter_centered = scatter_points - np.mean(scatter_points, axis=0)
-    # curve_centered = curve_points - np.mean(curve_points, axis=0)
-    
-    # Compute cross-covariance matrix
-    H = np.dot(scatter_points.T, curve_points)
-    
-    # Perform SVD
-    U, S, Vt = np.linalg.svd(H)
-    
-    # Compute rotation matrix
-    R = np.dot(Vt.T, U.T)
-    
-    # Ensure proper rotation (det(R) = 1)
-    if np.linalg.det(R) < 0:
-        Vt[-1,:] *= -1
-        R = np.dot(Vt.T, U.T)
-    
-    return R
-
-def match_template(pointcloud, template, window_size, error_threshold=float('inf'), visualize=False):
+# Match template using DTW similarity
+def match_template(pointcloud, template_points, window_size, error_threshold=float('inf'), visualize=False):
     best_match = None
     best_error = float('inf')
 
-    # Embed 2D template into 3D
-    template_3d = embed_template_3d(template)
-    template_3d_normalized, _, _ = normalize_pointcloud(template_3d)
-    x_template = template_3d_normalized[:, 0]
-    y_template = template_3d_normalized[:, 1]
-    params, _ = curve_fit(template_curve, x_template, y_template)
-    print(params)
+    # Fit a spline to the template
+    template_spline = fit_spline(template_points)
+    template_curve_points = evaluate_spline(template_spline)
 
     # Sliding window search
     for i in range(window_size, len(pointcloud) - window_size + 1):
         window = pointcloud[i-window_size:i+window_size]
-        window_normalized, _, _ = normalize_pointcloud(window)
+        window, _, _ = normalize_pointcloud(window)
 
-        window_rotation = find_optimal_rotation(window_normalized, template_3d_normalized)
-        rotated_window = window_normalized @ window_rotation.T
+        # Fit a spline to the window
+        window = window[:, :2]
+        window_spline = fit_spline(window)
+        window_curve_points = evaluate_spline(window_spline)
 
-        x_window = rotated_window[:, 0]
-        y_window = rotated_window[:, 1]
-        # Fit the template curve to the window
-        y_fitted = template_curve(x_window, *params)
-        error = np.sum((y_window - y_fitted) ** 2)
+        # Compute DTW similarity
+        error = dtw_distance(template_curve_points, window_curve_points)
 
         if error < best_error and error < error_threshold:
             best_error = error
             best_match = i
-            
+
+            # Plot best match
             if visualize:
-                # Plot best match
-                fig = plt.figure(figsize=(6, 6))
-                ax = fig.add_subplot(111, projection='3d')
-                ax.plot(x_window, y_window, 'bo-', label="Window Points")
-                ax.plot(x_window, y_fitted, 'r-', label="Fitted Curve")
-                ax.legend()
-                ax.set_title(f"Best Match at index {i} (Error: {best_error:.2f})")
-                ax.set_xlabel("X")
-                ax.set_ylabel("Y")
-                ax.set_zlabel("Z")
+                plt.figure(figsize=(6, 6))
+                plt.plot(template_curve_points[:, 0], template_curve_points[:, 1], 'r-', label="Template Curve")
+                plt.plot(window_curve_points[:, 0], window_curve_points[:, 1], 'bo-', label="Window Points")
+                plt.legend()
+                plt.title(f"Best Match at index {i} (Error: {best_error:.2f})")
+                plt.xlabel("X")
+                plt.ylabel("Y")
                 plt.show()
     
     return best_match, best_error
@@ -115,7 +86,7 @@ def pointcloud_to_segments(points, template=TEST_TEMPLATE, window_size=WINDOW_SI
     labels = [SegmentType.color(SegmentType.SEGMENT) for _ in range(points.shape[0])]
 
     # Detect Feature
-    best_index, best_error = match_template(points, template=template, window_size=window_size, visualize=visualize)
+    best_index, best_error = match_template(points, template_points=template, window_size=window_size, visualize=visualize)
     if best_index is not None:
         for i in range(best_index-window_size, best_index+window_size):
             labels[i] = SegmentType.color(SegmentType.FEATURE)
