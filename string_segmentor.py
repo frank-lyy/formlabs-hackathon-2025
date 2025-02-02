@@ -7,6 +7,19 @@ import time
 FPS = 2
 record_data = True
 
+def get_string_point(reference_pc, string_name, pos=None):
+    """
+    string_name is either "left" or "right"
+    
+    0 <= pos <= 1 is used if the reference_pc is a line (i.e. contains 2 points)
+    
+    Otherwise, this function should the xyz location of the origin of the reference_pc
+    relative to camera left optical frame.
+    
+    Return (x,y,z)
+    """
+    pass
+
 def get_mask_orange(image):
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     lower_bound = np.array([0, 50, 130])
