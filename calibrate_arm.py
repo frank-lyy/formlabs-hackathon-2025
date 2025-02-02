@@ -2,8 +2,8 @@ import curses
 import threading
 from commander import *
 
-def move_arm_in_thread(commander, arm_id, angleA, angleB):
-    commander.move_arm(arm_id, angleA, angleB, debug=False)
+def move_arm_in_thread(commander, ser_idx, angleA, angleB):
+    commander.move_arm(ser_idx, angleA, angleB, debug=False)
 
 def main(stdscr):
     ser0 = serial.Serial(port="/dev/ttyACM0", baudrate=9600, timeout=5) 
@@ -59,7 +59,7 @@ def main(stdscr):
 
 #            if (prev_angle1A != angle1A or prev_angle1B != angle1B) not ignore_cmd_1:
 #                prev_angle1A, prev_angle1B = angle1A, angle1B
-#                move_thread_1 = threading.Thread(target=move_arm_in_thread, args=(commander, 1, angle1A, angle1B)).start()
+#                move_thread_1 = threading.Thread(target=move_arm_in_thread, args=(commander, 1, angle1A, angle1B))
 #                move_thread_1.start()
 
             stdscr.addstr(0, 0, f"angle0A: {angle0A}, angle0B: {angle0B}, angle1A: {angle1A}, angle1B: {angle1B}     ")
