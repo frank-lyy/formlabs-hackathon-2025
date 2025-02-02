@@ -23,40 +23,27 @@ def improve_mask(mask, quad_mask, visualize=False):
         
     return mask
 
-def clean_data(data):
-    """ 
-    outputs a dictionary with 'points' key and a list of pointclouds as values
-    pointclouds have been downsampled and (improved) masks have been applied
-    """
-    n = len(data['mask'])
-
-    cleaned_data = {'points': []}
-    
-    # mask all points outside of the corners
-    image_shape = data['mask'][0].shape
+def create_quad_mask(image_shape, corners=CORNERS):
     quad_mask = np.zeros(image_shape, dtype=np.uint8)
-    corners_array = CORNERS.reshape((-1, 1, 2)).astype(np.int32)
+    corners_array = corners.reshape((-1, 1, 2)).astype(np.int32)
     cv2.fillPoly(quad_mask, [corners_array], 1)
+    return quad_mask
 
-    for i in range(n):
-        mask = data['mask'][i]
-        mask = improve_mask(mask, quad_mask, visualize=False)
-        points = data['points'][i]
-        cleaned_points = points[mask]
+def clean_data(mask, points, quad_mask, voxel_size=0.01, visualize=False):
+    """ 
+    takes in a single mask and pointcloud and returns a cleaned version
+    pointclouds have been downsampled and (improved) masks have been applied
+    """    
+    mask = improve_mask(mask, quad_mask, visualize=visualize)
+    cleaned_points = points[mask]
 
-        pc = PointCloud(cleaned_points.shape[0])
-        mutable_xyzs = pc.mutable_xyzs()
-        mutable_xyzs[:] = cleaned_points.T
-        downsampled_pc = pc.VoxelizedDownSample(voxel_size=0.01)
-        downsampled_points = downsampled_pc.xyzs().T
-
-        if i == 0:
-            print("Downsampling removed {:d} points".format(cleaned_points.shape[0] - downsampled_points.shape[0]))
-            cleaned_data['initial_points'] = downsampled_points
-        else:
-            cleaned_data['points'].append(downsampled_points)
+    pc = PointCloud(cleaned_points.shape[0])
+    mutable_xyzs = pc.mutable_xyzs()
+    mutable_xyzs[:] = cleaned_points.T
+    downsampled_pc = pc.VoxelizedDownSample(voxel_size=voxel_size)
+    downsampled_points = downsampled_pc.xyzs().T
         
-    return cleaned_data
+    return downsampled_points
 
 def visualize_helper(iteration, points, ax):
     ax.cla()
@@ -123,5 +110,9 @@ def visualize_data(cleaned_data):
     
 if __name__ == "__main__":
     data = load_data("data/data2.npz")
-    cleaned_data = clean_data(data)
+    quad_mask = create_quad_mask(data['mask'][0].shape, corners=CORNERS)
+    cleaned_data = {'points': []}
+    cleaned_data['initial_points'] = clean_data(data['mask'][0], data['points'][0], quad_mask, visualize=True) #clean_data(data['mask'][0], data['points'][0], quad_mask))
+    for i in range(1, len(data['points'])):
+        cleaned_data['points'].append(clean_data(data['mask'][i], data['points'][i], quad_mask))
     visualize_data(cleaned_data)
