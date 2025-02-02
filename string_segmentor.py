@@ -62,13 +62,9 @@ def get_initial_pointcloud_order(mask, points, quad_mask, visualize=False):
     
     return ordered_initial_points
 
-def realtime_track_state(source_pointcloud, mask, points):
-    target_data = {
-        "mask": [mask],
-        "points": [points]
-    }
-    cleaned_data = clean_data(target_data)
-    ordered_target_pointcloud = track_state(source_pointcloud, cleaned_data["initial_points"])
+def realtime_track_state(source_pointcloud, mask, points, quad_mask, visualize=False):
+    cleaned_points = clean_data(mask, points, quad_mask, visualize=visualize)
+    ordered_target_pointcloud = track_state(source_pointcloud, cleaned_points)
     
     return ordered_target_pointcloud
 
@@ -130,7 +126,7 @@ def main():
     zed = initialize_camera()
     prev_time = time.time()
 
-    # corner choosing stage
+    # Corner choosing stage
     while True:
         # Get data
         image, depth, points = get_camera_data(zed)
@@ -207,8 +203,8 @@ def main():
         # Store data
         if time.time() - prev_time > 1 / FPS and record_data:
             prev_time = time.time()
-            blue_data["target_points"] = realtime_track_state(blue_data["source_points"], mask_blue, points)
-            orange_data["target_points"] = realtime_track_state(orange_data["source_points"], mask_orange, points)
+            blue_data["target_points"] = realtime_track_state(blue_data["source_points"], mask_blue, points, quad_mask, visualize=True)
+            orange_data["target_points"] = realtime_track_state(orange_data["source_points"], mask_orange, points, quad_mask, visualize=True)
             blue_data["source_points"] = blue_data["target_points"]
             orange_data["source_points"] = orange_data["target_points"]
 
