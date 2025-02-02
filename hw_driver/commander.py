@@ -29,11 +29,11 @@ class Commander:
 def main():
     ser0 = serial.Serial(port="/dev/ttyACM0", baudrate=9600, timeout=1) 
     commander = Commander(ser0, None)
-    time.sleep(3)
+    time.sleep(2)
 
-    commander.move_wrist(0, 1000, 1000, 1000, 1000)
+    #commander.move_wrist(0, 100, 100, 100, 100)
     #time.sleep(3)
-    #commander.move_arm(0, 180, 180)
+    commander.move_arm(0, 180, 180)
 
 if __name__ == "__main__":
     main()

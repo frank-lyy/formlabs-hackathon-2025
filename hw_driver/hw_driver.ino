@@ -1,5 +1,11 @@
 #include <Adafruit_PWMServoDriver.h>
+#include <AccelStepper.h>
+#include <MultiStepper.h>
+
 Adafruit_PWMServoDriver servoDriver = Adafruit_PWMServoDriver(0x40);
+AccelStepper stepperA(AccelStepper::DRIVER, 2, 5);
+AccelStepper stepperB(AccelStepper::DRIVER, 3, 6);
+MultiStepper steppers;
 
 // Command length
 #define CMD_LEN 10
@@ -16,56 +22,22 @@ Adafruit_PWMServoDriver servoDriver = Adafruit_PWMServoDriver(0x40);
 
 // Stepper motor settings
 #define EN_PIN     8
-#define STEP_X_PIN 2
-#define STEP_Y_PIN 3
-#define DIR_X_PIN  5
-#define DIR_Y_PIN  6
-
-// Stepper motor settings
 #define STEPS_PER_REV       200
 #define STEPPER_PULSE_WIDTH 100
 #define STEPPER_PERIOD      5000
 #define STEPPER_A_RATIO     1.0
 #define STEPPER_B_RATIO     1.0
-double STEPS_PER_DEGREE_A = STEPS_PER_REV * STEPPER_A_RATIO / 360.0;
-double STEPS_PER_DEGREE_B = STEPS_PER_REV * STEPPER_B_RATIO / 360.0;
 
-int currAngleA = 0;
-int currAngleB = 0;
 void moveStepper(uint8_t* data) {
   int angleA = data[0];
   int angleB = data[1];
 
-  int requiredStepsA = (int)((angleA - currAngleA) * STEPS_PER_DEGREE_A);
-  int requiredStepsB = (int)((angleB - currAngleB) * STEPS_PER_DEGREE_B);
-  int totalStepsRequired = max(abs(requiredStepsA), abs(requiredStepsB));
-  
-  // Set rotation direction
-  digitalWrite(DIR_X_PIN, requiredStepsA < 0);
-  digitalWrite(DIR_Y_PIN, requiredStepsB < 0);
-
-  for (int i = 0; i < totalStepsRequired; i++) {
-    // Send pulse of HIGH command
-    if (i < abs(requiredStepsA)) {
-      digitalWrite(STEP_X_PIN, HIGH);
-    }
-    if (i < abs(requiredStepsB)) {
-      digitalWrite(STEP_Y_PIN, HIGH);
-    }
-    delayMicroseconds(STEPPER_PULSE_WIDTH);
-
-    // Send LOW command
-    if (i < abs(requiredStepsA)) {
-      digitalWrite(STEP_X_PIN, LOW);
-    }
-    if (i < abs(requiredStepsB)) {
-      digitalWrite(STEP_Y_PIN, LOW);
-    }
-    delayMicroseconds(STEPPER_PERIOD - STEPPER_PULSE_WIDTH);
-  }
-
-  currAngleA = angleA;
-  currAngleB = angleB;
+  long pos[2];
+  pos[0] = (int)(angleA * STEPPER_A_RATIO * STEPS_PER_REV / 360.0);
+  pos[1] = (int)(angleB * STEPPER_B_RATIO * STEPS_PER_REV / 360.0);
+  steppers.moveTo(pos);
+  steppers.runSpeedToPosition();
+  delay(1000);
 }
 
 void moveWrist(uint8_t* data) {
@@ -114,6 +86,7 @@ void moveWrist(uint8_t* data) {
   servoDriver.setPWM(SERVO_B_ID, 0, pWidthB);
   servoDriver.setPWM(SERVO_C_ID, 0, pWidthC);
   servoDriver.setPWM(SERVO_D_ID, 0, pWidthD);
+  delay(1000);
 }
 
 // This defines the command indices
@@ -124,14 +97,20 @@ void (*actions[])(uint8_t*) = {
 
 void setup() {
   Serial.begin(9600);
-  pinMode(EN_PIN, OUTPUT);
-  digitalWrite(EN_PIN, LOW);
-  pinMode(STEP_X_PIN, OUTPUT);
-  pinMode(STEP_Y_PIN, OUTPUT);
-  pinMode(DIR_X_PIN, OUTPUT);
-  pinMode(DIR_Y_PIN, OUTPUT);
+
+  // Servo motor setup
   servoDriver.begin();
-  servoDriver.setPWMFreq(60);
+  servoDriver.setPWMFreq(SERVO_FREQ);
+ 
+  // Set enable pins
+  pinMode(EN_PIN, OUTPUT);
+  digitalWrite(EN_PIN, LOW); 
+
+  // Stepper motor setup
+  stepperA.setMaxSpeed(100);
+  stepperB.setMaxSpeed(100);
+  steppers.addStepper(stepperA);
+  steppers.addStepper(stepperB);
 }
 
 uint8_t inBytes[CMD_LEN];
