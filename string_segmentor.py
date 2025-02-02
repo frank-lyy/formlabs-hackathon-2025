@@ -1,5 +1,4 @@
 from camera import *
-from data_loader import clean_data
 
 import cv2
 import numpy as np

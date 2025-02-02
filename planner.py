@@ -4,7 +4,10 @@ import numpy as np
 from scipy.spatial import KDTree
 from scipy.signal import savgol_filter
 from sklearn.decomposition import PCA
+from scipy.optimize import curve_fit
 from enum import Enum
+
+ANGLE = np.array([[-1, 0], [0, 0], [0, 1]])
 
 class SegmentType(Enum):
     SEGMENT = "red"
@@ -15,6 +18,38 @@ class SegmentType(Enum):
     @staticmethod
     def color(segment_type):
         return segment_type.value
+
+def template_curve(x, a, b, c):
+    return a * x**2 + b * x + c
+
+def match_template(pointcloud, template_points, window_size):
+    best_match = None
+    best_error = float('inf')
+
+    normalized_pointcloud, _, _ = normalize_pointcloud(pointcloud)
+    normalized_template_points, _, _ = normalize_pointcloud(template_points)
+    
+    # Fit a curve to the template points
+    x_template = np.array([p[0] for p in normalized_template_points])
+    y_template = np.array([p[1] for p in normalized_template_points])
+    params, _ = curve_fit(template_curve, x_template, y_template)
+    
+    # Perform a sliding window scan
+    for i in range(len(normalized_pointcloud) - window_size + 1):
+        window = normalized_pointcloud[i:i + window_size]
+        x_window = np.array([p[0] for p in window])
+        y_window = np.array([p[1] for p in window])
+        
+        # Compute error between window points and template curve
+        y_fitted = template_curve(x_window, *params)
+        error = np.sum((y_window - y_fitted) ** 2)
+        
+        if error < best_error:
+            best_error = error
+            best_match = window
+    
+    return best_match, best_error
+
 
 def segment_shoelace(points, curvature_threshold=2, loop_threshold=0.005):
     """
