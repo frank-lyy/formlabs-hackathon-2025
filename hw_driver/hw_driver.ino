@@ -37,7 +37,9 @@ void moveStepper(uint8_t* data) {
   pos[1] = (int)(angleB * STEPPER_B_RATIO * STEPS_PER_REV / 360.0);
   steppers.moveTo(pos);
   steppers.runSpeedToPosition();
-  delay(1000);
+
+  uint8_t response[] = {0xFF, 0x00};
+  Serial.write(response, sizeof(response));
 }
 
 void moveWrist(uint8_t* data) {
@@ -86,7 +88,10 @@ void moveWrist(uint8_t* data) {
   servoDriver.setPWM(SERVO_B_ID, 0, pWidthB);
   servoDriver.setPWM(SERVO_C_ID, 0, pWidthC);
   servoDriver.setPWM(SERVO_D_ID, 0, pWidthD);
-  delay(1000);
+
+  delay(100);
+  uint8_t response[] = {0xFF, 0x01};
+  Serial.write(response, sizeof(response));
 }
 
 // This defines the command indices
