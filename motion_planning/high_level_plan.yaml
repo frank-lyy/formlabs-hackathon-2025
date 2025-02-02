@@ -1,0 +1,69 @@
+# Notes
+# Reference point clouds are rotation invariant
+# Points/poses defined in world frame.
+
+# l_target_pose and r_target_pose are executable python code. Their ultimate
+# output should be RigidTransform() objects stored in l_target_pose and r_target_pose variables.
+# They assume that functions GetStringPoint(i) (0 <= i <= 1; 0 = string source, 1 = string end) 
+# is defined, and that variables left_eef_frame and right_eef_frame are available. They
+# also assume that variables left_reference_point_cloud and right_reference_point_cloud
+# are generated (np.array(step["left/right_reference_point_cloud"])) prior to executing the 
+# l_target_pose and r_target_pose code.
+
+# l_open_close and r_open_close are 1 if the gripper should close after reach the target location, 0 if the gripper should open
+
+# If left/right_reference_point_cloud is None: Assume we do not have to manipulate this string during this step.
+# (or it can be left as none if it's simply not used in the l_target_pose and r_target_pose code for a particular step)
+
+steps:
+  - step_id: 0
+    description: "Grab right string"
+    left_reference_point_cloud: None
+    right_reference_point_cloud: 
+      - [0, 0]
+      - [0, 0]
+    l_target_pose: |
+      l_target_position = GetStringPoint(right_reference_point_cloud, "right", 0.95)
+      l_target_pose = RigidTransform(RotationMatrix() @ RotationMatrix.MakeYRotation(np.pi/2), l_target_position)
+    r_target_pose: 
+      r_target_position = GetStringPoint(right_reference_point_cloud, "right", 0.5)
+      r_target_pose = RigidTransform(RotationMatrix() @ RotationMatrix.MakeYRotation(np.pi/2), r_target_position)
+    l_open_close: 1  # close
+    r_open_close: 1  # close
+
+  - step_id: 1
+    description: "Bend right string 90 deg"
+    left_reference_point_cloud: None
+    right_reference_point_cloud: None
+    l_target_pose: |
+      l_current_pose = plant.CalcRelativeTransform(plant_context, plant.world_frame(), left_eef_frame)
+      r_current_pose = plant.CalcRelativeTransform(plant_context, plant.world_frame(), right_eef_frame)
+      string_length = np.linalg.norm(l_current_pose.translation() - r_current_pose.translation())
+      l_target_pose = RigidTransform(RotationMatrix().MakeZRotation(np.pi/2) @ RotationMatrix.MakeYRotation(np.pi/2), r_current_pose.translation() + [string_length, 0, 0])
+    r_target_pose: | # don't move right gripper
+      r_current_pose = plant.CalcRelativeTransform(plant_context, plant.world_frame(), right_eef_frame)
+      r_target_pose = r_current_pose
+    l_open_close: 0  # open
+    r_open_close: 0  # open
+
+  - step_id: 2
+    description: "Grab left string"
+    left_reference_point_cloud: 
+      - [0, 0]
+      - [0, 0]
+    right_reference_point_cloud: None
+    l_target_pose: |
+      l_target_position = GetStringPoint(left_reference_point_cloud, "left", 0.6)
+      l_target_pose = RigidTransform(RotationMatrix() @ RotationMatrix.MakeYRotation(np.pi/2), l_target_position)
+    r_target_pose: 
+      r_target_position = GetStringPoint(left_reference_point_cloud, "left", 0.5)
+      r_target_pose = RigidTransform(RotationMatrix() @ RotationMatrix.MakeYRotation(np.pi/2), r_target_position)
+
+  - step_id: 
+    description: "Bend right string 90 deg"
+    left_reference_point_cloud: None
+    right_reference_point_cloud:  # 90 deg bend
+      - [1, 0]
+      - [0, 0]
+      - [0, 1]
+
