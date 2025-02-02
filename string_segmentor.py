@@ -1,6 +1,7 @@
 from camera import *
 from data_loader import *
 from point_correspondences import *
+from planner import *
 
 import cv2
 import numpy as np
@@ -8,6 +9,10 @@ import time
 
 FPS = 2
 record_data = True
+
+# Store data
+orange_data = {}
+blue_data = {}
 
 def get_string_point(reference_pc, string_name, pos=None):
     """
@@ -20,7 +25,17 @@ def get_string_point(reference_pc, string_name, pos=None):
     
     Return (x,y,z)
     """
-    pass
+    if string_name == "left":
+        pointcloud = orange_data["target_points"]
+    elif string_name == "right":
+        pointcloud = blue_data["target_points"]
+
+    if pos is not None:
+        return pointcloud[int(pos * len(pointcloud))]
+    else:
+        best_index = segment_shoelace(pointcloud, reference_pc)
+        return pointcloud[best_index]
+
 
 def get_mask_orange(image):
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -61,10 +76,6 @@ def main():
     # Initialize camera
     zed = initialize_camera()
     prev_time = time.time()
-
-    # Store data
-    orange_data = {}
-    blue_data = {}
 
     while True:
         # Get data
@@ -112,8 +123,6 @@ def main():
             prev_time = time.time()
             blue_data["target_points"] = realtime_track_state(blue_data["source_points"], mask_blue, points)
             orange_data["target_points"] = realtime_track_state(orange_data["source_points"], mask_orange, points)
-            blue_segments = segment_shoelace(blue_data["target_points"])
-            orange_segments = segment_shoelace(orange_data["target_points"])
             blue_data["source_points"] = blue_data["target_points"]
             orange_data["source_points"] = orange_data["target_points"]
 
