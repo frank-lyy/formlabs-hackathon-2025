@@ -103,14 +103,18 @@ X_Goal_seq = [(
               ),
               (
                   RigidTransform(RotationMatrix.MakeYRotation(np.pi/2), np.array([0, -0.6, 0.015])),
-                  RigidTransform(RotationMatrix.MakeYRotation(np.pi/2), np.array([-0.1, -0.4, 0.015]))
+                  RigidTransform(RotationMatrix.MakeZRotation(np.pi/2) @ RotationMatrix.MakeYRotation(np.pi/2), np.array([-0.1, -0.4, 0.015]))
               ),
               (
                   RigidTransform(RotationMatrix.MakeZRotation(np.pi/2) @ RotationMatrix.MakeYRotation(np.pi/2), np.array([0.2, -0.4, 0.015])),
                   RigidTransform(RotationMatrix.MakeYRotation(np.pi/2), np.array([-0.3, -0.5, 0.015]))
+              ),
+              (
+                  RigidTransform(RotationMatrix.MakeZRotation(np.pi/2) @ RotationMatrix.MakeYRotation(np.pi/2), np.array([0.2, -0.4, 0.015])),
+                  RigidTransform(RotationMatrix.MakeZRotation(np.pi/2) @ RotationMatrix.MakeYRotation(np.pi/2), np.array([0, -0.4, 0.015]))
               )]
 # (Left, Right)
-open_close_seq = [(1, 1), (0, 0), (1, 1)]  # 1 = close, 0 = open
+open_close_seq = [(1, 1), (0, 0), (1, 1), (0, 0)]  # 1 = close, 0 = open
 
 def get_next_action():
     if action_idx >= len(X_Goal_seq):
@@ -131,9 +135,9 @@ while True:
     X_Start_R = plant.CalcRelativeTransform(plant_context, plant.world_frame(), right_eef_frame)
     
     trajL = KinematicTrajOpt(plant, plant_context, endowrist_left_model_instance_idx, "endowrist_forcep1", 
-                             left_wrist_joint_idx, X_Start_L, X_Goal_L, prev_open_close[0])
+                             left_wrist_joint_idx, X_Start_L, X_Goal_L, prev_open_close[0], open_close_L)
     trajR = KinematicTrajOpt(plant, plant_context, endowrist_right_model_instance_idx, "endowrist_forcep1", 
-                             right_wrist_joint_idx, X_Start_R, X_Goal_R, prev_open_close[1])
+                             right_wrist_joint_idx, X_Start_R, X_Goal_R, prev_open_close[1], open_close_R)
     VisualizePath(meshcat, plant, left_eef_frame, trajL, f"traj{action_idx}L")
     VisualizePath(meshcat, plant, right_eef_frame, trajR, f"traj{action_idx}R")
     

@@ -55,9 +55,26 @@ def VisualizePath(meshcat, plant, frame, traj, name):
         
         
 def KinematicTrajOpt(plant, plant_context, endowrist_model_instance_idx, frame_name, 
-                     wrist_joint_idx, X_Start, X_Goal, open_close, acceptable_pos_err=0.001, 
-                     acceptable_angle_error=0.05, acceptable_vel_err=0.01) -> BsplineTrajectory:    
+                     wrist_joint_idx, X_Start, X_Goal, prev_open_close, open_close, acceptable_pos_err=0.001, 
+                     acceptable_angle_error=0.05, acceptable_vel_err=0.01) -> BsplineTrajectory: 
+    
     frame = plant.GetFrameByName(frame_name, endowrist_model_instance_idx)
+    
+    # If the start and goal are close, return a linear interpolation between the start and goal configurations
+    if np.linalg.norm(X_Start.translation() - X_Goal.translation()) < 0.03 and np.linalg.norm((X_Start.rotation() @ X_Goal.rotation().transpose()).ToAngleAxis().angle()) < 0.1:
+        q_start = plant.GetPositions(plant_context)
+        q_goal, _ = ik(plant, plant_context, frame, X_Goal, translation_error=0, rotation_error=0.05, regions=None, pose_as_constraint=True)
+        
+        # Very cheap workaround -- q_goal's ik solution seems to have bugged forcep angles, so we're just not gonna change the force angles at all. 
+        forcep1_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep1", endowrist_model_instance_idx).position_start()
+        forcep2_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep2", endowrist_model_instance_idx).position_start()
+        q_goal[forcep1_idx] = q_start[forcep1_idx]
+        q_goal[forcep2_idx] = q_start[forcep2_idx]
+        
+        duration = 1
+        times = np.array([0., duration])
+        positions = np.vstack((q_start, q_goal)).T  # Shape (num_positions, 2)
+        return PiecewisePolynomial.FirstOrderHold(times, positions)
     
     trajopt = KinematicTrajectoryOptimization(plant.num_positions(), 8)  # 8 control points in Bspline
     prog = trajopt.get_mutable_prog()
@@ -112,7 +129,7 @@ def KinematicTrajOpt(plant, plant_context, endowrist_model_instance_idx, frame_n
         plant_context
     )
     # Offset the gripping angle from if the gripper is open (i.e. the forcep is at an angle)
-    goal_orientation_offset = RotationMatrix.MakeYRotation(-gripper_open_angle/2) if not open_close else RotationMatrix()
+    goal_orientation_offset = RotationMatrix.MakeYRotation(-gripper_open_angle/2) if not prev_open_close else RotationMatrix()
     goal_orientation_constraint = OrientationConstraint(
         plant,
         plant.world_frame(),
@@ -149,7 +166,7 @@ def KinematicTrajOpt(plant, plant_context, endowrist_model_instance_idx, frame_n
     a = np.zeros((1, plant.num_positions()))
     a[0][plant.GetJointByName("joint_endowrist_body_endowrist_forcep1", endowrist_model_instance_idx).position_start()] = 1
     a[0][plant.GetJointByName("joint_endowrist_body_endowrist_forcep2", endowrist_model_instance_idx).position_start()] = -1
-    if open_close:  # Closed
+    if prev_open_close:  # Closed
         lb = np.array([[-0.01]])
         ub = np.array([[+0.01]])
     else:
@@ -158,10 +175,9 @@ def KinematicTrajOpt(plant, plant_context, endowrist_model_instance_idx, frame_n
     for s in evaluate_at_s:
         trajopt.AddPathPositionConstraint(LinearConstraint(a, lb, ub), s)
 
-    # Solve a linearly-interpolated IK problem to use as initial guess
+    # Set initial guess to be a linear interpolation between the start and goal
     q_start, _ = ik(plant, plant_context, frame, X_Start, translation_error=0, rotation_error=0.05, regions=None, pose_as_constraint=True)
     q_goal, _ = ik(plant, plant_context, frame, X_Goal, translation_error=0, rotation_error=0.05, regions=None, pose_as_constraint=True)
-
     q_guess = np.linspace(q_start, q_goal, 8).T  # (num_positions, 8) np array
     initial_guess = BsplineTrajectory(trajopt.basis(), q_guess)
     trajopt.SetInitialGuess(initial_guess)

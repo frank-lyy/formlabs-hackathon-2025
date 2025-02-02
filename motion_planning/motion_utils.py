@@ -35,7 +35,7 @@ def diagram_visualize_connections(diagram: Diagram, file: Union[BinaryIO, str]) 
     file.write(svg_data)
     
 
-def ik(plant, plant_context, frame, pose, translation_error=0, rotation_error=0.05, regions=None, pose_as_constraint=True) -> tuple[np.ndarray, bool]:
+def ik(plant, plant_context, frame, pose, rotation_offset=RotationMatrix(), translation_error=0, rotation_error=0.05, regions=None, pose_as_constraint=True) -> tuple[np.ndarray, bool]:
     """
     Use Inverse Kinematics to solve for a configuration that satisfies a
     task-space pose for a given frame. 
@@ -80,7 +80,7 @@ def ik(plant, plant_context, frame, pose, translation_error=0, rotation_error=0.
                 frameAbar=plant.world_frame(),
                 R_AbarA=pose.rotation(),
                 frameBbar=frame,
-                R_BbarB=RotationMatrix(),
+                R_BbarB=rotation_offset,
                 theta_bound=rotation_error,
             )
             ik_prog.AddQuadraticErrorCost(np.identity(len(q_variables)), q_nominal, q_variables)
