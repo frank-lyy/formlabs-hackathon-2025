@@ -52,9 +52,11 @@ def VisualizePath(meshcat, plant, frame, traj, name):
     meshcat.SetLine(name, pos_3d_matrix)
         
         
-def KinematicTrajOpt(plant, plant_context, endowrist_left_model_instance_idx, endowrist_right_model_instance_idx, 
-                     frame_name, frame_model_instance_idx, wrist_joint_idx, X_Start, X_Goal, acceptable_pos_err=0.001, 
-                     acceptable_angle_error=0.05, acceptable_vel_err=0.01):
+def KinematicTrajOpt(plant, plant_context, endowrist_model_instance_idx, frame_name, 
+                     frame_model_instance_idx, wrist_joint_idx, X_Start, X_Goal, 
+                     acceptable_pos_err=0.001, acceptable_angle_error=0.05, acceptable_vel_err=0.01):
+    gripper_open_angle = 1.0
+    
     frame = plant.GetFrameByName(frame_name, frame_model_instance_idx)
     
     trajopt = KinematicTrajectoryOptimization(plant.num_positions(), 8)  # 8 control points in Bspline
@@ -67,7 +69,7 @@ def KinematicTrajOpt(plant, plant_context, endowrist_left_model_instance_idx, en
     weight = 10
     control_points = trajopt.control_points()  # M-by-N matrix (M: positions, N: control points)
     for i in range(control_points.shape[1]):  # N control points
-        prog.AddQuadraticCost(weight * (control_points[wrist_joint_idx, i] - (-0.4)) ** 2)
+        prog.AddQuadraticCost(weight * (control_points[wrist_joint_idx, i] - (-0.4)) ** 2)  # Target wrist-to-endowrist angle: -0.4 radians
     
     trajopt.AddPositionBounds(
         plant.GetPositionLowerLimits(), plant.GetPositionUpperLimits()
@@ -114,7 +116,7 @@ def KinematicTrajOpt(plant, plant_context, endowrist_left_model_instance_idx, en
         plant.world_frame(),
         X_Goal.rotation(),  # orientation of X_Goal in world frame ...
         frame,
-        RotationMatrix(),
+        RotationMatrix.MakeYRotation(-gripper_open_angle/2),  # So that the middle between the two grippers faces down
         acceptable_angle_error,
         plant_context
     )
@@ -143,9 +145,9 @@ def KinematicTrajOpt(plant, plant_context, endowrist_left_model_instance_idx, en
         
     # Add open gripper constraint
     a = np.zeros((1, plant.num_positions()))
-    a[0][plant.GetJointByName("joint_endowrist_body_endowrist_forcep1", endowrist_left_model_instance_idx).position_start()] = 1
-    a[0][plant.GetJointByName("joint_endowrist_body_endowrist_forcep2", endowrist_left_model_instance_idx).position_start()] = -1
-    lb = np.array([[0.5]])
+    a[0][plant.GetJointByName("joint_endowrist_body_endowrist_forcep1", endowrist_model_instance_idx).position_start()] = 1
+    a[0][plant.GetJointByName("joint_endowrist_body_endowrist_forcep2", endowrist_model_instance_idx).position_start()] = -1
+    lb = np.array([[gripper_open_angle]])
     ub = np.array([[np.inf]])
     for s in evaluate_at_s:
         trajopt.AddPathPositionConstraint(LinearConstraint(a, lb, ub), s)
@@ -167,3 +169,11 @@ def KinematicTrajOpt(plant, plant_context, endowrist_left_model_instance_idx, en
 
     final_traj = trajopt.ReconstructTrajectory(result)  # BSplineTrajectory
     return final_traj
+
+
+def close_gripper(plant, plant_context, endowrist_model_instance_idx):
+    pass
+
+
+def open_gripper(plant, plant_context, endowrist_model_instance_idx):
+    pass

@@ -91,14 +91,14 @@ simulator.AdvanceTo(0.0001)
 
 traj_zero_time = 0
 
-X_Goals = [RigidTransform(RotationMatrix.MakeXRotation(np.pi).MakeYRotation(np.pi/2), np.array([0, -0.5, 0.02])),
-           RigidTransform(RotationMatrix.MakeXRotation(np.pi).MakeYRotation(np.pi/2), np.array([0, -0.6, 0.02])),
-           RigidTransform(RotationMatrix.MakeXRotation(np.pi).MakeYRotation(np.pi/2), np.array([0.2, -0.4, 0.02]))]
+X_Goals = [RigidTransform(RotationMatrix.MakeXRotation(np.pi).MakeYRotation(np.pi/2), np.array([0, -0.5, 0.015])),
+           RigidTransform(RotationMatrix.MakeXRotation(np.pi).MakeYRotation(np.pi/2), np.array([0, -0.6, 0.015])),
+           RigidTransform(RotationMatrix.MakeXRotation(np.pi).MakeYRotation(np.pi/2), np.array([0.2, -0.4, 0.015]))]
 for i in range(len(X_Goals)):
     X_Start = plant.CalcRelativeTransform(plant_context, plant.world_frame(), left_eef_frame)
     wrist_joint_idx = plant.GetJointByName("joint_wrist_left_endowrist_left").position_start()
-    traj = KinematicTrajOpt(plant, plant_context, endowrist_left_model_instance_idx, endowrist_right_model_instance_idx, "endowrist_forcep1", endowrist_left_model_instance_idx, wrist_joint_idx, X_Start, X_Goals[i])
-    VisualizePath(meshcat, plant, left_eef_frame, traj, "traj")
+    traj = KinematicTrajOpt(plant, plant_context, endowrist_left_model_instance_idx, "endowrist_forcep1", endowrist_left_model_instance_idx, wrist_joint_idx, X_Start, X_Goals[i])
+    VisualizePath(meshcat, plant, left_eef_frame, traj, f"traj{i}")
 
     while context.get_time() - traj_zero_time < traj.end_time():
         left_forcep1_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep1", endowrist_left_model_instance_idx).position_start()
