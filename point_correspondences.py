@@ -1,13 +1,13 @@
 from image_loader import *
+from data_loader import *
+
 import numpy as np
 from pycpd import DeformableRegistration
 import matplotlib.pyplot as plt
-from numpy.testing import assert_array_almost_equal
 from functools import partial
-from mpl_toolkits.mplot3d import Axes3D
 from sklearn.neighbors import NearestNeighbors
 
-def get_pointcloud(filename, width, height, remove_sides=False):
+def get_pointcloud_from_image(filename, width, height, remove_sides=False):
     depth_image = get_depth(filename+"_Depth.raw", width, height)
     mask = get_mask(filename+"_Color.png", width, height, remove_sides=remove_sides)
     
@@ -19,37 +19,47 @@ def get_pointcloud(filename, width, height, remove_sides=False):
                 
     return np.array(pointcloud)
 
-def initial_pointcloud_order(pointcloud):
-    # In the real setup, we will sort by y- or x- coordinate
-    # For this example image, we can use angle about the origin since the loop is arranged in a rough circle
-    # Normalize the pointcloud around unit hypersphere
-    normed_pointcloud, _, _ = normalize_pointcloud(pointcloud)
-    
-    angle_offset = np.pi * .54
-    arctan_with_offset = np.arctan2(normed_pointcloud[:, 1], normed_pointcloud[:, 0]) + angle_offset
-    # print(np.max(arctan_with_offset), np.min(arctan_with_offset))
-    arctan_with_offset = np.mod(arctan_with_offset + np.pi, 2 * np.pi) - np.pi
-    # print(np.max(arctan_with_offset), np.min(arctan_with_offset))
-    new_pointcloud = pointcloud[np.argsort(arctan_with_offset)]
-    
-    # visualize this pointcloud, on a red-blue scale based on angle
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    colors = np.interp(arctan_with_offset, [-np.pi, np.pi], [0, 1])
-    ax.scatter(normed_pointcloud[:, 0], normed_pointcloud[:, 1], normed_pointcloud[:, 2], c=colors)
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-    plt.show()
-
-    return new_pointcloud
-
 def normalize_pointcloud(points):
     centroid = np.mean(points, axis=0)
     points_centered = points - centroid
     scale = np.max(np.linalg.norm(points_centered, axis=1))
     points_normalized = points_centered / scale
     return points_normalized, centroid, scale
+
+def order_points_by_angle(pointcloud, normed_pointcloud):
+    # In the real setup, we will sort by y- or x- coordinate
+    # For this example image, we can use angle about the origin since the loop is arranged in a rough circle
+    angle_offset = np.pi * .54
+    arctan_with_offset = np.arctan2(normed_pointcloud[:, 1], normed_pointcloud[:, 0]) + angle_offset
+    # print(np.max(arctan_with_offset), np.min(arctan_with_offset))
+    arctan_with_offset = np.mod(arctan_with_offset + np.pi, 2 * np.pi) - np.pi
+    # print(np.max(arctan_with_offset), np.min(arctan_with_offset))
+    new_pointcloud = pointcloud[np.argsort(arctan_with_offset)]
+    colors = np.interp(arctan_with_offset, [-np.pi, np.pi], [0, 1])
+    return new_pointcloud, colors
+
+def order_points_by_y(pointcloud, normed_pointcloud):
+    new_pointcloud = pointcloud[np.argsort(normed_pointcloud[:, 1])]
+    colors = np.interp(normed_pointcloud[:, 1], [np.min(normed_pointcloud[:, 1]), np.max(normed_pointcloud[:, 1])], [0, 1])
+    return new_pointcloud, colors
+
+def initial_pointcloud_order(pointcloud, visualize=False):
+    # Normalize the pointcloud around unit hypersphere
+    normed_pointcloud, _, _ = normalize_pointcloud(pointcloud)
+    
+    ordered_pointcloud, colors = order_points_by_y(pointcloud, normed_pointcloud)
+    
+    # visualize this pointcloud, on a color scale based on angle
+    if visualize:
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(normed_pointcloud[:, 0], normed_pointcloud[:, 1], normed_pointcloud[:, 2], c=colors)
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        plt.show()
+
+    return ordered_pointcloud
 
 def visualize_cpd(iteration, error, X, Y, ax):
     plt.cla()
@@ -59,7 +69,7 @@ def visualize_cpd(iteration, error, X, Y, ax):
         iteration), horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, fontsize='x-large')
     ax.legend(loc='upper left', fontsize='x-large')
     plt.draw()
-    plt.pause(0.1)
+    plt.pause(0.01)
 
 def pc_registration(pointcloud_1, pointcloud_2, visualize=False):
     """ 
@@ -90,12 +100,12 @@ def pc_registration(pointcloud_1, pointcloud_2, visualize=False):
     
     return TY
 
-def track_state(filename_t1, filename_t2):
-    pointcloud_1 = get_pointcloud(filename_t1, width=424, height=240, remove_sides=True)
+def track_state_from_images(filename_t1, filename_t2, visualize=False):
+    pointcloud_1 = get_pointcloud_from_image(filename_t1, width=424, height=240, remove_sides=True)
     pointcloud_1 = initial_pointcloud_order(pointcloud_1)
-    pointcloud_2 = get_pointcloud(filename_t2, width=424, height=240, remove_sides=True)
+    pointcloud_2 = get_pointcloud_from_image(filename_t2, width=424, height=240, remove_sides=True)
 
-    TY = pc_registration(pointcloud_1, pointcloud_2, visualize=False)
+    TY = pc_registration(pointcloud_1, pointcloud_2, visualize=visualize)
 
     # order the points in pointcloud_2 based on the order of the closest points in TY
     nn = NearestNeighbors(n_neighbors=1, algorithm='kd_tree')
@@ -110,11 +120,11 @@ def track_state(filename_t1, filename_t2):
     # print(new_pointcloud_2)
     return new_pointcloud_2
 
-def visualize_labeled_pointclouds(filename_t1, filename_t2):
+def visualize_labeled_pointclouds_from_images(filename_t1, filename_t2):
     image1 = get_color(filename_t1+"_Color.png", width=424, height=240)
     image2 = get_color(filename_t2+"_Color.png", width=424, height=240)
-    pointcloud_1 = get_pointcloud(filename_t1, width=424, height=240, remove_sides=True)
-    pointcloud_2 = get_pointcloud(filename_t2, width=424, height=240, remove_sides=True)
+    pointcloud_1 = get_pointcloud_from_image(filename_t1, width=424, height=240, remove_sides=True)
+    pointcloud_2 = get_pointcloud_from_image(filename_t2, width=424, height=240, remove_sides=True)
     
     # Get transformed points (normalization handled in pc_registration)
     TY = pc_registration(pointcloud_1, pointcloud_2, visualize=True)
@@ -144,7 +154,55 @@ def visualize_labeled_pointclouds(filename_t1, filename_t2):
         plt.annotate(f'Point {idx}', (y, x), xytext=(5, 5), textcoords='offset points')
     
     plt.show()
+
+def track_state(source_pointcloud, target_pointcloud, visualize=False):
+    TY = pc_registration(source_pointcloud, target_pointcloud, visualize=visualize)
+
+    nn = NearestNeighbors(n_neighbors=1, algorithm='kd_tree')
+    nn.fit(target_pointcloud)
+
+    distances, indices = nn.kneighbors(TY)
     
+    # Create a mapping of each unique target index to all the TY points that map to it
+    target_to_source = {}
+    for source_idx, (target_idx, dist) in enumerate(zip(indices.flatten(), distances.flatten())):
+        if target_idx not in target_to_source:
+            target_to_source[target_idx] = (source_idx, dist)
+        elif dist < target_to_source[target_idx][1]:
+            target_to_source[target_idx] = (source_idx, dist)
+    
+    # For each target point that has multiple matches, keep only the closest one
+    final_source_indices = []
+    for target_idx, (source_idx, dist) in target_to_source.items():
+        final_source_indices.append((source_idx, target_idx))
+    
+    # Sort by source index to maintain original order
+    final_source_indices = sorted(final_source_indices, key=lambda x: x[0])
+    ordered_target_indices = [target_idx for _, target_idx in final_source_indices]
+    ordered_target_pointcloud = target_pointcloud[ordered_target_indices, :]
+
+    if visualize:
+        # color based on increasing index
+        colors = np.interp(range(len(ordered_target_pointcloud)), [0, len(ordered_target_pointcloud)], [0, 1])
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(ordered_target_pointcloud[:, 0], ordered_target_pointcloud[:, 1], ordered_target_pointcloud[:, 2], c=colors)
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        plt.show()
+
+    return ordered_target_pointcloud
+
 if __name__ == "__main__":
-    # visualize_labeled_pointclouds("images/1", "images/2")
-    track_state("images/1", "images/2")
+    data = load_data("data/data2.npz")
+    cleaned_data = clean_data(data)
+    source_pointcloud = cleaned_data['initial_points']
+    source_pointcloud = initial_pointcloud_order(source_pointcloud, visualize=True)
+    
+    for i in range(len(cleaned_data['points'])):
+        target_pointcloud = cleaned_data['points'][i]
+        ordered_target_pointcloud = track_state(source_pointcloud, target_pointcloud, visualize=True)
+        source_pointcloud = ordered_target_pointcloud
+        if i > 3:
+            break

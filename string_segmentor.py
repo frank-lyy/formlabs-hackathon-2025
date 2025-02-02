@@ -1,10 +1,12 @@
 from camera import *
+from data_loader import clean_data
+
 import cv2
 import numpy as np
 import time
 
 FPS = 2
-record_data = False
+record_data = True
 
 def get_mask_orange(image):
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -60,9 +62,11 @@ def main():
         
     # Save data
     if record_data:
+        print("recording data...")
         for key, val in data.items():
             data[key] = np.array(val)
-        np.savez("data.npz", **data)
+        cleaned_data = clean_data(data)
+        np.savez("data/video.npz", **cleaned_data)
 
     # Close the ZED
     zed.close()
