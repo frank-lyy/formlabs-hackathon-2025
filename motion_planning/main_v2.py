@@ -26,7 +26,7 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from motion_utils import ik
-from motion_planner import KinematicTrajOpt, VisualizePath
+from motion_planner import KinematicTrajOpt, VisualizePath, CloseGripper, OpenGripper
 
 import numpy as np
 np.set_printoptions(linewidth=200)  # Set the line width to 200 characters
@@ -77,6 +77,11 @@ AddMultibodyTriad(right_eef_frame, scene_graph, length=0.05, radius=0.001, opaci
 AddMultibodyTriad(plant.GetFrameByName("zed2i_left_camera_optical_frame"), scene_graph, length=0.05, radius=0.001, opacity=0.5)
 
 plant.Finalize()
+
+# Collect wrist joint indices for convenience (must be called post-Finalize)
+left_wrist_joint_idx = plant.GetJointByName("joint_wrist_left_endowrist_left").position_start()
+right_wrist_joint_idx = plant.GetJointByName("joint_wrist_right_endowrist_right").position_start()
+
 AddDefaultVisualization(robot_diagram_builder.builder(), meshcat=meshcat)
 diagram = robot_diagram_builder.Build()
 
@@ -91,26 +96,76 @@ simulator.AdvanceTo(0.0001)
 
 traj_zero_time = 0
 
-X_Goals = [RigidTransform(RotationMatrix.MakeXRotation(np.pi).MakeYRotation(np.pi/2), np.array([0, -0.5, 0.015])),
-           RigidTransform(RotationMatrix.MakeXRotation(np.pi).MakeYRotation(np.pi/2), np.array([0, -0.6, 0.015])),
-           RigidTransform(RotationMatrix.MakeXRotation(np.pi).MakeYRotation(np.pi/2), np.array([0.2, -0.4, 0.015]))]
-for i in range(len(X_Goals)):
-    X_Start = plant.CalcRelativeTransform(plant_context, plant.world_frame(), left_eef_frame)
-    wrist_joint_idx = plant.GetJointByName("joint_wrist_left_endowrist_left").position_start()
-    traj = KinematicTrajOpt(plant, plant_context, endowrist_left_model_instance_idx, "endowrist_forcep1", endowrist_left_model_instance_idx, wrist_joint_idx, X_Start, X_Goals[i])
-    VisualizePath(meshcat, plant, left_eef_frame, traj, f"traj{i}")
 
-    while context.get_time() - traj_zero_time < traj.end_time():
-        left_forcep1_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep1", endowrist_left_model_instance_idx).position_start()
-        left_forcep2_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep2", endowrist_left_model_instance_idx).position_start()
-        right_forcep1_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep1", endowrist_right_model_instance_idx).position_start()
-        right_forcep2_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep2", endowrist_right_model_instance_idx).position_start()
+traj = OpenGripper(plant, plant_context, endowrist_left_model_instance_idx)
+
+while context.get_time() - traj_zero_time < traj.end_time():
+    # left_forcep1_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep1", endowrist_left_model_instance_idx).position_start()
+    # left_forcep2_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep2", endowrist_left_model_instance_idx).position_start()
+    # right_forcep1_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep1", endowrist_right_model_instance_idx).position_start()
+    # right_forcep2_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep2", endowrist_right_model_instance_idx).position_start()
+    
+    q = traj.value(context.get_time() - traj_zero_time)
+    plant.SetPositions(plant_context, q)
+    simulator.AdvanceTo(context.get_time() + 0.001)
+traj_zero_time = context.get_time()
+    
+traj = CloseGripper(plant, plant_context, endowrist_left_model_instance_idx)
+
+while context.get_time() - traj_zero_time < traj.end_time():
+    # left_forcep1_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep1", endowrist_left_model_instance_idx).position_start()
+    # left_forcep2_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep2", endowrist_left_model_instance_idx).position_start()
+    # right_forcep1_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep1", endowrist_right_model_instance_idx).position_start()
+    # right_forcep2_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep2", endowrist_right_model_instance_idx).position_start()
+    
+    q = traj.value(context.get_time() - traj_zero_time)
+    plant.SetPositions(plant_context, q)
+    simulator.AdvanceTo(context.get_time() + 0.001)
+
+
+
+# # TEMPORARY
+# X_Goal_seq = [RigidTransform(RotationMatrix.MakeXRotation(np.pi).MakeYRotation(np.pi/2), np.array([0, -0.5, 0.015])),
+#            RigidTransform(RotationMatrix.MakeXRotation(np.pi).MakeYRotation(np.pi/2), np.array([0, -0.6, 0.015])),
+#            RigidTransform(RotationMatrix.MakeXRotation(np.pi).MakeYRotation(np.pi/2), np.array([0.2, -0.4, 0.015]))]
+# open_close_seq = [1, 0, 1]  # 1 = close, 0 = open
+
+# def get_next_action():
+#     if action_idx >= len(X_Goal_seq):
+#         return None, None
+#     return X_Goal_seq[action_idx], open_close_seq[action_idx]
+
+# action_idx = 0
+# while True:
+#     X_Goal, open_close = get_next_action()
+    
+#     if X_Goal is None:
+#         break
+    
+#     X_Start = plant.CalcRelativeTransform(plant_context, plant.world_frame(), left_eef_frame)
+    
+#     traj1 = KinematicTrajOpt(plant, plant_context, endowrist_left_model_instance_idx, "endowrist_forcep1", 
+#                             endowrist_left_model_instance_idx, left_wrist_joint_idx, X_Start, X_Goal)
+#     # if open_close:
+#     #     traj2 = CloseGripper(plant, plant_context, endowrist_left_model_instance_idx)
+#     # else:
+#     #     traj2 = OpenGripper(plant, plant_context, endowrist_left_model_instance_idx)
+    
+#     VisualizePath(meshcat, plant, left_eef_frame, traj1, f"traj{action_idx}")
+
+#     # for traj in [traj1, traj2]:
+#     for traj in [traj1]:
+#         while context.get_time() - traj_zero_time < traj.end_time():
+#             # left_forcep1_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep1", endowrist_left_model_instance_idx).position_start()
+#             # left_forcep2_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep2", endowrist_left_model_instance_idx).position_start()
+#             # right_forcep1_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep1", endowrist_right_model_instance_idx).position_start()
+#             # right_forcep2_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep2", endowrist_right_model_instance_idx).position_start()
+            
+#             q = traj.value(context.get_time() - traj_zero_time)
+#             plant.SetPositions(plant_context, q)
+#             simulator.AdvanceTo(context.get_time() + 0.001)
         
-        q = traj.value(context.get_time() - traj_zero_time)
-        plant.SetPositions(plant_context, q)
-        simulator.AdvanceTo(context.get_time() + 0.001)
-        
-    traj_zero_time = context.get_time()
+#         traj_zero_time = context.get_time()
     
     
 time.sleep(6)

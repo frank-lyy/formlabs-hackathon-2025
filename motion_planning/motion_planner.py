@@ -27,6 +27,8 @@ from motion_utils import ik
 import time
 import numpy as np
 
+gripper_open_angle = 1.5  # rad
+
 
 def VisualizePath(meshcat, plant, frame, traj, name):
     """
@@ -54,9 +56,7 @@ def VisualizePath(meshcat, plant, frame, traj, name):
         
 def KinematicTrajOpt(plant, plant_context, endowrist_model_instance_idx, frame_name, 
                      frame_model_instance_idx, wrist_joint_idx, X_Start, X_Goal, 
-                     acceptable_pos_err=0.001, acceptable_angle_error=0.05, acceptable_vel_err=0.01):
-    gripper_open_angle = 1.0
-    
+                     acceptable_pos_err=0.001, acceptable_angle_error=0.05, acceptable_vel_err=0.01) -> BsplineTrajectory:    
     frame = plant.GetFrameByName(frame_name, frame_model_instance_idx)
     
     trajopt = KinematicTrajectoryOptimization(plant.num_positions(), 8)  # 8 control points in Bspline
@@ -147,8 +147,8 @@ def KinematicTrajOpt(plant, plant_context, endowrist_model_instance_idx, frame_n
     a = np.zeros((1, plant.num_positions()))
     a[0][plant.GetJointByName("joint_endowrist_body_endowrist_forcep1", endowrist_model_instance_idx).position_start()] = 1
     a[0][plant.GetJointByName("joint_endowrist_body_endowrist_forcep2", endowrist_model_instance_idx).position_start()] = -1
-    lb = np.array([[gripper_open_angle]])
-    ub = np.array([[np.inf]])
+    lb = np.array([[gripper_open_angle - 0.01]])
+    ub = np.array([[gripper_open_angle + 0.01]])
     for s in evaluate_at_s:
         trajopt.AddPathPositionConstraint(LinearConstraint(a, lb, ub), s)
 
@@ -171,9 +171,58 @@ def KinematicTrajOpt(plant, plant_context, endowrist_model_instance_idx, frame_n
     return final_traj
 
 
-def close_gripper(plant, plant_context, endowrist_model_instance_idx):
-    pass
+def CloseGripper(plant, plant_context, endowrist_model_instance_idx, duration=0.5) -> PiecewisePolynomial:
+    current_plant_positions = plant.GetPositions(plant_context)
+    
+    forcep1_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep1", endowrist_model_instance_idx).position_start()
+    forcep2_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep2", endowrist_model_instance_idx).position_start()
+    
+    current_forcep1_angle = current_plant_positions[forcep1_idx]
+    current_forcep2_angle = current_plant_positions[forcep2_idx]
+    target_forcep_angle = (current_forcep1_angle + current_forcep2_angle) / 2  # grippers close when they have the same angle
+    target_plant_positions = current_plant_positions.copy()
+    target_plant_positions[forcep1_idx] = target_forcep_angle
+    target_plant_positions[forcep2_idx] = target_forcep_angle
+    
+    # Generate Trajectory object
+    num_samples = 50
+    times = np.linspace(0, duration, num_samples)
+
+    # Initialize trajectory array: all joints remain constant except the forceps
+    traj_values = np.tile(current_plant_positions[:, np.newaxis], num_samples)  # Shape (num_positions, num_samples)
+
+    # Modify the forceps positions over time
+    traj_values[forcep1_idx, :] = np.linspace(current_forcep1_angle, target_forcep_angle, num_samples)
+    traj_values[forcep2_idx, :] = np.linspace(current_forcep2_angle, target_forcep_angle, num_samples)
+
+    # Create a piecewise polynomial trajectory for the entire plant
+    trajectory = PiecewisePolynomial.FirstOrderHold(times, traj_values)
+    return trajectory
 
 
-def open_gripper(plant, plant_context, endowrist_model_instance_idx):
-    pass
+def OpenGripper(plant, plant_context, endowrist_model_instance_idx, duration=0.5) -> PiecewisePolynomial:
+    current_plant_positions = plant.GetPositions(plant_context)
+    
+    forcep1_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep1", endowrist_model_instance_idx).position_start()
+    forcep2_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep2", endowrist_model_instance_idx).position_start()
+    
+    current_forcep1_angle = current_plant_positions[forcep1_idx]
+    current_forcep2_angle = current_plant_positions[forcep2_idx]
+    
+    target_forcep1_angle = current_forcep1_angle + gripper_open_angle/2
+    target_forcep2_angle = current_forcep2_angle - gripper_open_angle/2
+    
+    # Generate Trajectory object
+    num_samples = 50
+    times = np.linspace(0, duration, num_samples)
+
+    # Initialize trajectory array: all joints remain constant except the forceps
+    traj_values = np.tile(current_plant_positions[:, np.newaxis], num_samples)  # Shape (num_positions, num_samples)
+
+    # Modify the forceps positions over time
+    traj_values[forcep1_idx, :] = np.linspace(current_forcep1_angle, target_forcep1_angle, num_samples)
+    traj_values[forcep2_idx, :] = np.linspace(current_forcep2_angle, target_forcep2_angle, num_samples)
+
+    # Create a piecewise polynomial trajectory for the entire plant
+    trajectory = PiecewisePolynomial.FirstOrderHold(times, traj_values)
+    return trajectory
