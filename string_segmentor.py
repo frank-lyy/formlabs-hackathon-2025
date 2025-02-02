@@ -14,27 +14,30 @@ record_data = True
 orange_data = {}
 blue_data = {}
 
-def get_string_point(reference_pc, string_name, pos=None):
+def get_feature_index(string_name, reference_pc):
     """
     string_name is either "left" or "right"
-    
-    0 <= pos <= 1 is used if the reference_pc is a line (i.e. contains 2 points)
-    
-    Otherwise, this function should the xyz location of the origin of the reference_pc
-    relative to camera left optical frame.
-    
-    Return (x,y,z)
+    Return the best fit index of the feature described by reference_pc
     """
-    if string_name == "left":
-        pointcloud = orange_data["target_points"]
-    elif string_name == "right":
-        pointcloud = blue_data["target_points"]
-
-    if pos is not None:
-        return pointcloud[int(pos * len(pointcloud))]
-    else:
-        best_index = segment_shoelace(pointcloud, reference_pc)
-        return pointcloud[best_index]
+    target_pc = orange_data["target_points"] if string_name == "left" else blue_data["target_points"]
+    best_index = segment_shoelace(target_pc)
+    return best_index
+    
+def get_position_index(string_name, pos):
+    """
+    string_name is either "left" or "right"
+    Return the index of the position pos (0 <= pos < 1)
+    """
+    target_pc = orange_data["target_points"] if string_name == "left" else blue_data["target_points"]
+    return int(pos * len(target_pc))
+    
+def get_position_from_index(string_name, idx):
+    """
+    string_name is either "left" or "right"
+    Return the (x, y, z) position of the index idx (0 <= idx < len(string_name))
+    """
+    target_pc = orange_data["target_points"] if string_name == "left" else blue_data["target_points"]
+    return target_pc[idx]
 
 
 def get_mask_orange(image):
