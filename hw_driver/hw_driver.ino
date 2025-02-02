@@ -14,17 +14,17 @@ MultiStepper steppers;
 // Servo settings
 #define SERVO_MIN 125
 #define SERVO_MAX 625
+#define ENDO_WRIST_MIN 650
+#define ENDO_WRIST_MAX 2350
 #define SERVO_FREQ 60
 #define SERVO_A_A_ID 0
 #define SERVO_A_B_ID 1
 #define SERVO_A_C_ID 2
 #define SERVO_A_D_ID 3
-#define SERVO_A_WRIST_ID 4
 #define SERVO_B_A_ID 5
 #define SERVO_B_B_ID 6
 #define SERVO_B_C_ID 7
 #define SERVO_B_D_ID 8
-#define SERVO_B_WRIST_ID 9
 
 // Stepper motor settings
 #define EN_PIN     8
@@ -59,7 +59,7 @@ void moveArm(uint8_t* data) {
 }
 
 void moveEndoWrist(uint8_t* data) {
-  int servoIdx = data[0];
+  int armIdx = data[0];
   int potA = (data[1] << 8) + data[2];
   int potB = (data[3] << 8) + data[4];
   int potC = (data[5] << 8) + data[6];
@@ -72,7 +72,7 @@ void moveEndoWrist(uint8_t* data) {
   int F1, F2; // Flexion Variables
   
   // A -> ABDUCTION
-  pWideA = map(potA, 0, 1023, SERVO_MIN, SERVO_MAX);
+  pWideA = map(potA, 0, 1023, ENDO_WRIST_MIN, ENDO_WRIST_MAX);
   pWidthA = int(float(pWideA) / 1000000 * SERVO_FREQ * 4096);
 
   // JAWS
@@ -88,20 +88,20 @@ void moveEndoWrist(uint8_t* data) {
   // F1 B -> FLEXION_1
   F1 = potB + ((potA-511)/2) + remappedPotC; // Jaw and abduction compensation
   F1 = constrain(F1, 0, 1023);
-  pWideB = map(F1, 0, 1023, SERVO_MIN, SERVO_MAX);
+  pWideB = map(F1, 0, 1023, ENDO_WRIST_MIN, ENDO_WRIST_MAX);
   pWidthB = int(float(pWideB) / 1000000 * SERVO_FREQ * 4096);
   
   // F2 C -> FLEXION_2
   F2 = potB + ((potA-511)/2) - remappedPotC; // Jaw and abduction compensation
   F2 = constrain(F2, 0, 1023);
-  pWideC = map(F2, 0, 1023, SERVO_MIN, SERVO_MAX);
+  pWideC = map(F2, 0, 1023, ENDO_WRIST_MIN, ENDO_WRIST_MAX);
   pWidthC = int(float(pWideC) / 1000000 * SERVO_FREQ * 4096);  
 
   // D -> SHAFT ROTATION
-  pWideD = map(potD, 0, 1023, SERVO_MIN, SERVO_MAX);
+  pWideD = map(potD, 0, 1023, ENDO_WRIST_MIN, ENDO_WRIST_MAX);
   pWidthD = int(float(pWideD) / 1000000 * SERVO_FREQ * 4096);
  
-  if (servoIdx == 0) {
+  if (armIdx == 0) {
     servoDriver.setPWM(SERVO_A_A_ID, 0, pWidthA);
     servoDriver.setPWM(SERVO_A_B_ID, 0, pWidthB);
     servoDriver.setPWM(SERVO_A_C_ID, 0, pWidthC);
@@ -122,12 +122,7 @@ void moveWrist(uint8_t* data) {
   int servoIdx = data[0];
   int angle = data[1];
   int pulse = map(angle, 0, 180, SERVO_MIN, SERVO_MAX);
-
-  if (servoIdx == 0) {
-    servoDriver.setPWM(SERVO_A_WRIST_ID, 0, pulse);
-  } else {
-    servoDriver.setPWM(SERVO_B_WRIST_ID, 0, pulse);
-  }
+  servoDriver.setPWM(servoIdx, 0, pulse);
   delay(500);
 
   uint8_t response[] = {0xFF, 0x02};
