@@ -54,16 +54,17 @@ def VisualizePath(meshcat, plant, frame, traj, name):
     meshcat.SetLine(name, pos_3d_matrix)
         
         
-def KinematicTrajOpt(plant, plant_context, endowrist_model_instance_idx, frame_name, 
-                     wrist_joint_idx, X_Start, X_Goal, prev_open_close, open_close, acceptable_pos_err=0.001, 
+def KinematicTrajOpt(plant, real_plant_context, endowrist_model_instance_idx, frame_name, 
+                     wrist_joint_idx, X_Start, X_Goal, prev_open_close, acceptable_pos_err=0.001, 
                      acceptable_angle_error=0.05, acceptable_vel_err=0.01) -> BsplineTrajectory: 
     
     frame = plant.GetFrameByName(frame_name, endowrist_model_instance_idx)
     
     # If the start and goal are close, return a linear interpolation between the start and goal configurations
-    if np.linalg.norm(X_Start.translation() - X_Goal.translation()) < 0.03 and np.linalg.norm((X_Start.rotation() @ X_Goal.rotation().transpose()).ToAngleAxis().angle()) < 0.1:
-        q_start = plant.GetPositions(plant_context)
-        q_goal, _ = ik(plant, plant_context, frame, X_Goal, translation_error=0, rotation_error=0.05, regions=None, pose_as_constraint=True)
+    if np.linalg.norm(X_Start.translation() - X_Goal.translation()) < 0.02 and np.linalg.norm((X_Start.rotation() @ X_Goal.rotation().transpose()).ToAngleAxis().angle()) < 0.1:
+        q_start = plant.GetPositions(real_plant_context)
+        print(f"q_start: {q_start}")
+        q_goal, _ = ik(plant, frame, X_Goal, translation_error=0, rotation_error=0.05, regions=None, pose_as_constraint=True)
         
         # Very cheap workaround -- q_goal's ik solution seems to have bugged forcep angles, so we're just not gonna change the force angles at all. 
         forcep1_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep1", endowrist_model_instance_idx).position_start()
@@ -75,6 +76,8 @@ def KinematicTrajOpt(plant, plant_context, endowrist_model_instance_idx, frame_n
         times = np.array([0., duration])
         positions = np.vstack((q_start, q_goal)).T  # Shape (num_positions, 2)
         return PiecewisePolynomial.FirstOrderHold(times, positions)
+    
+    plant_context = plant.CreateDefaultContext()
     
     trajopt = KinematicTrajectoryOptimization(plant.num_positions(), 8)  # 8 control points in Bspline
     prog = trajopt.get_mutable_prog()
@@ -157,8 +160,8 @@ def KinematicTrajOpt(plant, plant_context, endowrist_model_instance_idx, frame_n
     trajopt.AddVelocityConstraintAtNormalizedTime(final_vel_constraint, 1)
     
     # Non-collision constraints at finite samples
-    collision_constraint = MinimumDistanceLowerBoundConstraint(plant, 0.0001, plant_context, None, 0.01)
     evaluate_at_s = np.linspace(0, 1, 25)
+    # collision_constraint = MinimumDistanceLowerBoundConstraint(plant, 0.0001, plant_context, None, 0.01)
     # for s in evaluate_at_s:
     #     trajopt.AddPathPositionConstraint(collision_constraint, s)
         
@@ -176,8 +179,8 @@ def KinematicTrajOpt(plant, plant_context, endowrist_model_instance_idx, frame_n
         trajopt.AddPathPositionConstraint(LinearConstraint(a, lb, ub), s)
 
     # Set initial guess to be a linear interpolation between the start and goal
-    q_start, _ = ik(plant, plant_context, frame, X_Start, translation_error=0, rotation_error=0.05, regions=None, pose_as_constraint=True)
-    q_goal, _ = ik(plant, plant_context, frame, X_Goal, translation_error=0, rotation_error=0.05, regions=None, pose_as_constraint=True)
+    q_start, _ = ik(plant, frame, X_Start, translation_error=0, rotation_error=0.05, regions=None, pose_as_constraint=True)
+    q_goal, _ = ik(plant, frame, X_Goal, translation_error=0, rotation_error=0.05, regions=None, pose_as_constraint=True)
     q_guess = np.linspace(q_start, q_goal, 8).T  # (num_positions, 8) np array
     initial_guess = BsplineTrajectory(trajopt.basis(), q_guess)
     trajopt.SetInitialGuess(initial_guess)

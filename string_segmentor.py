@@ -1,4 +1,4 @@
-from camera import *
+# from camera import *
 from data_loader import *
 from point_correspondences import *
 
@@ -9,7 +9,7 @@ import time
 FPS = 2
 record_data = True
 
-def get_string_point(reference_pc, string_name, pos=None):
+def get_feature_idx(string_name, reference_pc):
     """
     string_name is either "left" or "right"
     
@@ -18,9 +18,49 @@ def get_string_point(reference_pc, string_name, pos=None):
     Otherwise, this function should the xyz location of the origin of the reference_pc
     relative to camera left optical frame.
     
-    Return (x,y,z)
+    Return (x,y,z), index
     """
-    pass
+    return 4
+
+def get_position_index(string_name, pos):
+    """
+    string_name is either "left" or "right"
+    
+    0 <= pos <= 1 is used if the reference_pc is a line (i.e. contains 2 points)
+    
+    return pos --> index
+    """
+    if pos == 0:
+        return 0
+    elif pos == 0.5:
+        return 5
+    elif pos == 0.6:
+        return 6
+    elif pos == 0.95:
+        return 9
+    
+def get_position_from_index(string_name, idx):
+    if string_name == "left":
+        if idx == 0:
+            return np.array([0, 0.05, 0.35])
+        elif idx == 5:
+            return np.array([0, -0.05, 0.4])
+        elif idx == 6:
+            return np.array([0, -0.06, 0.41])
+        elif idx == 9:
+            return np.array([0, -0.1, 0.45])
+    else:
+        if idx == 0:
+            return np.array([0.12, 0.05, 0.35])
+        elif idx == 5:
+            return np.array([0.12, -0.05, 0.4])
+        elif idx == 6:
+            return np.array([0.12, -0.06, 0.41])
+        elif idx == 9:
+            return np.array([0.12, -0.1, 0.45])
+        else:
+            return np.array([0.12, -0.03, 0.37])
+
 
 def get_mask_orange(image):
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
