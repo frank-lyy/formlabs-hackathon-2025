@@ -68,6 +68,7 @@ steps:
     right_reference_point_cloud: None
     l_target_pose: |
       l_current_pose = plant.CalcRelativeTransform(plant_context, plant.world_frame(), left_eef_frame)
+      print(f"plant.GetPositions(plant_context): {plant.GetPositions(plant_context)}")
       l_target_pose = l_current_pose
     r_target_pose: |
       l_current_pose = plant.CalcRelativeTransform(plant_context, plant.world_frame(), left_eef_frame)
@@ -78,7 +79,7 @@ steps:
       # Need gripper to rotate a fully 180 degrees to turn the string around
       r_target_pose = RigidTransform(RotationMatrix().MakeZRotation(np.pi) @ RotationMatrix.MakeYRotation(np.pi/2), l_current_pose.translation() + string_length * r_target_direction)
     l_open_close: 1  # close -- left can stay grasping the string since left isn't used at the next step
-    r_open_close: 0  # close
+    r_open_close: 0  # open
 
   - step_id: 4
     description: "Grab right string to prepare to put right string over left string"
@@ -89,6 +90,7 @@ steps:
       - [0, 1]
     l_target_pose: |
       l_current_pose = plant.CalcRelativeTransform(plant_context, plant.world_frame(), left_eef_frame)
+      print(f"plant.GetPositions(plant_context): {plant.GetPositions(plant_context)}")
       l_target_pose = l_current_pose
     r_target_pose: |
       r_current_pose = plant.CalcRelativeTransform(plant_context, plant.world_frame(), right_eef_frame)
@@ -106,6 +108,7 @@ steps:
     right_reference_point_cloud: None
     l_target_pose: |
       l_current_pose = plant.CalcRelativeTransform(plant_context, plant.world_frame(), left_eef_frame)
+      print(f"plant.GetPositions(plant_context): {plant.GetPositions(plant_context)}")
       l_target_pose = l_current_pose
     r_target_pose: |
       r_current_pose = plant.CalcRelativeTransform(plant_context, plant.world_frame(), right_eef_frame)

@@ -28,6 +28,7 @@ import time
 import numpy as np
 
 gripper_open_angle = 1.5  # rad
+gripper_closed_angle = 0.175
 
 
 def VisualizePath(meshcat, plant, frame, traj, name):
@@ -196,19 +197,20 @@ def KinematicTrajOpt(plant, real_plant_context, endowrist_model_instance_idx, fr
     return final_traj
 
 
-def CloseGripper(plant, endowrist_model_instance_idx, joint_positions_at_close, duration=0.5) -> PiecewisePolynomial:   
+def CloseGripper(plant, endowrist_model_instance_idx, joint_positions_at_close, duration=0.5) -> PiecewisePolynomial:
     forcep1_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep1", endowrist_model_instance_idx).position_start()
     forcep2_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep2", endowrist_model_instance_idx).position_start()
     
     current_forcep1_angle = joint_positions_at_close[forcep1_idx]
     current_forcep2_angle = joint_positions_at_close[forcep2_idx]
+    
     target_forcep_angle = (current_forcep1_angle + current_forcep2_angle) / 2  # grippers close when they have the same angle
     target_plant_positions = joint_positions_at_close.copy()
     target_plant_positions[forcep1_idx] = target_forcep_angle
     target_plant_positions[forcep2_idx] = target_forcep_angle
     
     # Generate Trajectory object
-    num_samples = 50
+    num_samples = 2
     times = np.linspace(0, duration, num_samples)
 
     # Initialize trajectory array: all joints remain constant except the forceps

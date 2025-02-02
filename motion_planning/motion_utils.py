@@ -52,8 +52,6 @@ def ik(plant, frame, pose, rotation_offset=RotationMatrix(), translation_error=0
     Returns the result of the IK program and a boolean for whether the program
     and all constraint were successfully solved.
     """
-    plant_context = plant.CreateDefaultContext()
-    
     satisfy_regions_constraint = regions is not None
     if regions is None:  # Make regions not None so that the for loop below runs at least once
         regions = {"_": Point(np.zeros(6))}
@@ -62,7 +60,7 @@ def ik(plant, frame, pose, rotation_offset=RotationMatrix(), translation_error=0
     ik_start = time.time()
     solve_success = False
     for region in list(regions.values()):
-        ik = InverseKinematics(plant, plant_context)
+        ik = InverseKinematics(plant, plant.CreateDefaultContext())
         q_variables = ik.q()  # Get variables for MathematicalProgram
         ik_prog = ik.get_mutable_prog()
 

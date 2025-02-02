@@ -131,8 +131,8 @@ while True:
     
     action_idx = high_level_planner.step_num
     
-    AddMeshcatTriad(meshcat, f"X_Goal{action_idx}L", X_PT=X_Goal_L, length=0.01, radius=0.001, opacity=0.5)
-    AddMeshcatTriad(meshcat, f"X_Goal{action_idx}R", X_PT=X_Goal_R, length=0.01, radius=0.001, opacity=0.5)
+    AddMeshcatTriad(meshcat, f"X/X_Goal{action_idx}L", X_PT=X_Goal_L, length=0.01, radius=0.001, opacity=0.5)
+    AddMeshcatTriad(meshcat, f"X/X_Goal{action_idx}R", X_PT=X_Goal_R, length=0.01, radius=0.001, opacity=0.5)
     
     X_Start_L = plant.CalcRelativeTransform(plant_context, plant.world_frame(), left_eef_frame)
     X_Start_R = plant.CalcRelativeTransform(plant_context, plant.world_frame(), right_eef_frame)
@@ -143,8 +143,8 @@ while True:
                              left_wrist_joint_idx, X_Start_L, X_Goal_L, prev_open_close[0])
     trajR = KinematicTrajOpt(plant, plant_context, endowrist_right_model_instance_idx, "endowrist_forcep1", 
                              right_wrist_joint_idx, X_Start_R, X_Goal_R, prev_open_close[1])
-    VisualizePath(meshcat, plant, left_eef_frame, trajL, f"traj{action_idx}L")
-    VisualizePath(meshcat, plant, right_eef_frame, trajR, f"traj{action_idx}R")
+    VisualizePath(meshcat, plant, left_eef_frame, trajL, f"trajs/traj{action_idx}L")
+    VisualizePath(meshcat, plant, right_eef_frame, trajR, f"trajs/traj{action_idx}R")
     
     if open_close_L:
         traj2L = CloseGripper(plant, endowrist_left_model_instance_idx, trajL.value(trajL.end_time()).flatten())
@@ -158,7 +158,7 @@ while True:
     else:  # If opening gripper, open after both arms reach goal
         traj2R = OpenGripper(plant, endowrist_right_model_instance_idx, trajR.value(trajR.end_time()).flatten())
 
-    while context.get_time() - traj_zero_time < max(trajL.end_time(), trajR.end_time()):           
+    while context.get_time() - traj_zero_time < max(trajL.end_time(), trajR.end_time()):
         q_L = trajL.value(context.get_time() - traj_zero_time).flatten()
         q_R = trajR.value(context.get_time() - traj_zero_time).flatten()
         
@@ -176,8 +176,9 @@ while True:
     
     # Run secondary trajectory for opening the gripper after both arms have reached their goals
     if not open_close_L or not open_close_R:
+        start_positions = plant.GetPositions(plant_context)
         while context.get_time() - traj_zero_time < max(traj2L.end_time(), traj2R.end_time()):
-            q_combined = np.zeros(14)
+            q_combined = start_positions
             if not open_close_L:
                 q_L = traj2L.value(context.get_time() - traj_zero_time).flatten()
                 q_combined[left_arm_joint_indices] = q_L[left_arm_joint_indices]

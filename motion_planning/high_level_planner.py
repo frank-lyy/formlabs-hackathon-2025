@@ -78,8 +78,6 @@ class HighLevelPlanner():
             "right_reference_point_cloud": right_reference_point_cloud,
         }
         
-        
-        print(f"Executing l_target_pose:\n{step_data['l_target_pose']}")
         exec(step_data["l_target_pose"], exec_namespace)
         l_target_pose = exec_namespace.get("l_target_pose", None)
 
