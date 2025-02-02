@@ -41,10 +41,10 @@ directives:
     name: zed2i_camera
     file: package://assets/zed2i.urdf
 - add_weld:
-    parent: world
+    parent: Robot.SLDASM::base_link
     child: zed2i_camera::base_link
     X_PC:
-        translation: [0, 0, 0]
+        translation: [0, -0.11596, 0.280]
         rotation: !Rpy
             deg: [0, 40, -90]
 

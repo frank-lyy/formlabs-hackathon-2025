@@ -1,10 +1,6 @@
 <?xml version="1.0"?>
 <robot name="zed2i_camera" xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-  <material name="zed2i_mat">
-    <color rgba="0.5 0.5 0.5 1.0"/>
-  </material>
-
   <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
   <!-- 1) Base link (root of the camera)                                       -->
   <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
@@ -27,7 +23,11 @@
       <geometry>
         <mesh filename="package://assets/zed2i.obj"/>
       </geometry>
-      <material name="zed2i_mat"/>
+      <material
+        name="">
+        <color
+          rgba="0.252941176470588 0.252941176470588 0.252941176470588 1" />
+      </material>
     </visual>
 
     <inertial>
