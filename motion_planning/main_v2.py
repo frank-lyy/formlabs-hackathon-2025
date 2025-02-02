@@ -26,6 +26,7 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from motion_utils import ik
+from motion_planner import KinematicTrajOpt, VisualizePath
 
 import numpy as np
 import importlib
@@ -70,6 +71,10 @@ right_eef_frame = plant.GetFrameByName("endowrist_forcep1", endowrist_right_mode
 AddMultibodyTriad(left_eef_frame, scene_graph, length=0.05, radius=0.001, opacity=0.5)
 AddMultibodyTriad(right_eef_frame, scene_graph, length=0.05, radius=0.001, opacity=0.5)
 
+# Visualize zed2i camera transform
+AddMultibodyTriad(plant.GetFrameByName("zed2i_left_camera_frame"), scene_graph, length=0.05, radius=0.001, opacity=0.5)
+# AddMultibodyTriad(plant.GetFrameByName("zed2i_left_camera_optical_frame"), scene_graph, length=0.05, radius=0.001, opacity=0.5)
+
 plant.Finalize()
 AddDefaultVisualization(robot_diagram_builder.builder(), meshcat=meshcat)
 diagram = robot_diagram_builder.Build()
@@ -81,19 +86,20 @@ context = simulator.get_mutable_context()
 plant_context = plant.GetMyMutableContextFromRoot(context)
 
 meshcat.StartRecording()
+simulator.AdvanceTo(0.0001)
 
-pose = RigidTransform(RotationMatrix.MakeXRotation(np.pi).MakeYRotation(np.pi/2), np.array([0, -0.5, 0.1]))
-q, _ = ik(plant, plant_context, left_eef_frame, pose, translation_error=0, rotation_error=0.05, regions=None, pose_as_constraint=True)
-print(q)
+X_Start = plant.CalcRelativeTransform(plant_context, plant.world_frame(), left_eef_frame)
+print(f"X_Start: {X_Start}")
+X_Goal = RigidTransform(RotationMatrix.MakeXRotation(np.pi).MakeYRotation(np.pi/2), np.array([0, -0.5, 0.1]))
+traj = KinematicTrajOpt(plant, plant_context, left_eef_frame, X_Start, X_Goal)
+VisualizePath(meshcat, plant, left_eef_frame, traj, "traj")
 
-
-t = np.linspace(0, 1, 100)
-interpolated_array = np.array([(1 - tau)*np.zeros(num_robot_positions) + tau*q for tau in t])
-for i in range(interpolated_array.shape[0]):
-    plant.SetPositions(plant_context, interpolated_array[i])
+while context.get_time() < traj.end_time():
+    q = traj.value(context.get_time())
+    plant.SetPositions(plant_context, q)
     simulator.AdvanceTo(context.get_time() + 0.001)
     
-time.sleep(10)
+time.sleep(6)
 meshcat.PublishRecording()
 
 collision_checker_params = {}
