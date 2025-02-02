@@ -16,7 +16,8 @@ from pydrake.all import (
     Solve,
     RotationMatrix,
     JacobianWrtVariable,
-    MinimumDistanceLowerBoundConstraint ,
+    MinimumDistanceLowerBoundConstraint,
+    LinearConstraint,
 )
 from manipulation.meshcat_utils import AddMeshcatTriad
 from manipulation.utils import ConfigureParser
@@ -51,17 +52,31 @@ def VisualizePath(meshcat, plant, frame, traj, name):
     meshcat.SetLine(name, pos_3d_matrix)
         
         
-def KinematicTrajOpt(plant, plant_context, frame, X_Start, X_Goal, acceptable_pos_err=0.01, acceptable_angle_error=0.05):
+def KinematicTrajOpt(plant, plant_context, endowrist_left_model_instance_idx, endowrist_right_model_instance_idx, 
+                     frame_name, frame_model_instance_idx, wrist_joint_idx, X_Start, X_Goal, acceptable_pos_err=0.001, 
+                     acceptable_angle_error=0.05, acceptable_vel_err=0.01):
+    frame = plant.GetFrameByName(frame_name, frame_model_instance_idx)
+    
     trajopt = KinematicTrajectoryOptimization(plant.num_positions(), 8)  # 8 control points in Bspline
     prog = trajopt.get_mutable_prog()
     
     trajopt.AddPathLengthCost(1.0)
+    trajopt.AddDurationCost(1.0)
+    
+    # Add custom cost to reward tilting the wrist higher (to raise string while moving)
+    weight = 10
+    control_points = trajopt.control_points()  # M-by-N matrix (M: positions, N: control points)
+    for i in range(control_points.shape[1]):  # N control points
+        prog.AddQuadraticCost(weight * (control_points[wrist_joint_idx, i] - (-0.4)) ** 2)
     
     trajopt.AddPositionBounds(
         plant.GetPositionLowerLimits(), plant.GetPositionUpperLimits()
     )
     trajopt.AddVelocityBounds(
-        plant.GetVelocityLowerLimits(), plant.GetVelocityUpperLimits()
+        plant.GetVelocityLowerLimits()/5, plant.GetVelocityUpperLimits()/5
+    )
+    trajopt.AddAccelerationBounds(
+        plant.GetAccelerationLowerLimits()/25, plant.GetAccelerationUpperLimits()/25
     )
     
     start_pos_constraint = PositionConstraint(
@@ -106,14 +121,34 @@ def KinematicTrajOpt(plant, plant_context, frame, X_Start, X_Goal, acceptable_po
     trajopt.AddPathPositionConstraint(goal_pos_constraint, 1)
     trajopt.AddPathPositionConstraint(goal_orientation_constraint, 1)
     
+    # Zero final velocity constraint
+    plant_autodiff = plant.ToAutoDiffXd()
+    frame_autodiff = plant_autodiff.GetFrameByName(frame_name, frame_model_instance_idx)
+    final_vel_constraint = SpatialVelocityConstraint(
+        plant_autodiff,
+        plant_autodiff.world_frame(),
+        np.zeros(3) - acceptable_vel_err,  # lower limit
+        np.zeros(3) + acceptable_vel_err,  # upper limit
+        frame_autodiff,
+        np.zeros(3),
+        plant_autodiff.CreateDefaultContext(),
+    )
+    trajopt.AddVelocityConstraintAtNormalizedTime(final_vel_constraint, 1)
+    
     # Non-collision constraints at finite samples
     collision_constraint = MinimumDistanceLowerBoundConstraint(plant, 0.0001, plant_context, None, 0.01)
     evaluate_at_s = np.linspace(0, 1, 25)
-    for s in evaluate_at_s:
-        trajopt.AddPathPositionConstraint(collision_constraint, s)
+    # for s in evaluate_at_s:
+    #     trajopt.AddPathPositionConstraint(collision_constraint, s)
         
     # Add open gripper constraint
-    
+    a = np.zeros((1, plant.num_positions()))
+    a[0][plant.GetJointByName("joint_endowrist_body_endowrist_forcep1", endowrist_left_model_instance_idx).position_start()] = 1
+    a[0][plant.GetJointByName("joint_endowrist_body_endowrist_forcep2", endowrist_left_model_instance_idx).position_start()] = -1
+    lb = np.array([[0.5]])
+    ub = np.array([[np.inf]])
+    for s in evaluate_at_s:
+        trajopt.AddPathPositionConstraint(LinearConstraint(a, lb, ub), s)
 
     # Solve a linearly-interpolated IK problem to use as initial guess
     q_start, _ = ik(plant, plant_context, frame, X_Start, translation_error=0, rotation_error=0.05, regions=None, pose_as_constraint=True)

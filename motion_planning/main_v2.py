@@ -29,6 +29,8 @@ from motion_utils import ik
 from motion_planner import KinematicTrajOpt, VisualizePath
 
 import numpy as np
+np.set_printoptions(linewidth=200)  # Set the line width to 200 characters
+
 import importlib
 import time
 
@@ -72,8 +74,7 @@ AddMultibodyTriad(left_eef_frame, scene_graph, length=0.05, radius=0.001, opacit
 AddMultibodyTriad(right_eef_frame, scene_graph, length=0.05, radius=0.001, opacity=0.5)
 
 # Visualize zed2i camera transform
-AddMultibodyTriad(plant.GetFrameByName("zed2i_left_camera_frame"), scene_graph, length=0.05, radius=0.001, opacity=0.5)
-# AddMultibodyTriad(plant.GetFrameByName("zed2i_left_camera_optical_frame"), scene_graph, length=0.05, radius=0.001, opacity=0.5)
+AddMultibodyTriad(plant.GetFrameByName("zed2i_left_camera_optical_frame"), scene_graph, length=0.05, radius=0.001, opacity=0.5)
 
 plant.Finalize()
 AddDefaultVisualization(robot_diagram_builder.builder(), meshcat=meshcat)
@@ -88,16 +89,29 @@ plant_context = plant.GetMyMutableContextFromRoot(context)
 meshcat.StartRecording()
 simulator.AdvanceTo(0.0001)
 
-X_Start = plant.CalcRelativeTransform(plant_context, plant.world_frame(), left_eef_frame)
-print(f"X_Start: {X_Start}")
-X_Goal = RigidTransform(RotationMatrix.MakeXRotation(np.pi).MakeYRotation(np.pi/2), np.array([0, -0.5, 0.1]))
-traj = KinematicTrajOpt(plant, plant_context, left_eef_frame, X_Start, X_Goal)
-VisualizePath(meshcat, plant, left_eef_frame, traj, "traj")
+traj_zero_time = 0
 
-while context.get_time() < traj.end_time():
-    q = traj.value(context.get_time())
-    plant.SetPositions(plant_context, q)
-    simulator.AdvanceTo(context.get_time() + 0.001)
+X_Goals = [RigidTransform(RotationMatrix.MakeXRotation(np.pi).MakeYRotation(np.pi/2), np.array([0, -0.5, 0.02])),
+           RigidTransform(RotationMatrix.MakeXRotation(np.pi).MakeYRotation(np.pi/2), np.array([0, -0.6, 0.02])),
+           RigidTransform(RotationMatrix.MakeXRotation(np.pi).MakeYRotation(np.pi/2), np.array([0.2, -0.4, 0.02]))]
+for i in range(len(X_Goals)):
+    X_Start = plant.CalcRelativeTransform(plant_context, plant.world_frame(), left_eef_frame)
+    wrist_joint_idx = plant.GetJointByName("joint_wrist_left_endowrist_left").position_start()
+    traj = KinematicTrajOpt(plant, plant_context, endowrist_left_model_instance_idx, endowrist_right_model_instance_idx, "endowrist_forcep1", endowrist_left_model_instance_idx, wrist_joint_idx, X_Start, X_Goals[i])
+    VisualizePath(meshcat, plant, left_eef_frame, traj, "traj")
+
+    while context.get_time() - traj_zero_time < traj.end_time():
+        left_forcep1_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep1", endowrist_left_model_instance_idx).position_start()
+        left_forcep2_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep2", endowrist_left_model_instance_idx).position_start()
+        right_forcep1_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep1", endowrist_right_model_instance_idx).position_start()
+        right_forcep2_idx = plant.GetJointByName("joint_endowrist_body_endowrist_forcep2", endowrist_right_model_instance_idx).position_start()
+        
+        q = traj.value(context.get_time() - traj_zero_time)
+        plant.SetPositions(plant_context, q)
+        simulator.AdvanceTo(context.get_time() + 0.001)
+        
+    traj_zero_time = context.get_time()
+    
     
 time.sleep(6)
 meshcat.PublishRecording()

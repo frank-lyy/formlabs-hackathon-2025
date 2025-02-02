@@ -155,7 +155,7 @@ simply not possible in real life / out of the domain of normal operation. -->
       lower="-1.52"
       upper="1.52"
       effort="300"
-      velocity="10" />
+      velocity="2" />
   </joint>
   <link
     name="link_wrist_left">
@@ -213,7 +213,7 @@ simply not possible in real life / out of the domain of normal operation. -->
       lower="-1.57"
       upper="1.57"
       effort="300"
-      velocity="10" />
+      velocity="2" />
   </joint>
   <link
     name="link_endowrist_left">
@@ -271,7 +271,7 @@ simply not possible in real life / out of the domain of normal operation. -->
       lower="-0.7"
       upper="-0.2"
       effort="300"
-      velocity="5" />
+      velocity="2" />
   </joint>
   <link
     name="link_endowrist_box_left_ref">
@@ -382,7 +382,7 @@ simply not possible in real life / out of the domain of normal operation. -->
       lower="-1.52"
       upper="1.52"
       effort="300"
-      velocity="10" />
+      velocity="2" />
   </joint>
   <link
     name="link_wrist_right">
@@ -440,7 +440,7 @@ simply not possible in real life / out of the domain of normal operation. -->
       lower="-1.57"
       upper="1.57"
       effort="300"
-      velocity="10" />
+      velocity="2" />
   </joint>
   <link
     name="link_endowrist_right">
@@ -498,7 +498,7 @@ simply not possible in real life / out of the domain of normal operation. -->
       lower="-0.7"
       upper="-0.2"
       effort="300"
-      velocity="5" />
+      velocity="2" />
   </joint>
   <link
     name="link_endowrist_box_right_ref">
