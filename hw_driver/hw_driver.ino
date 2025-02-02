@@ -35,8 +35,17 @@ MultiStepper steppers;
 #define STEPPER_B_RATIO     1.0
 
 void moveArm(uint8_t* data) {
-  int angleA = data[0];
-  int angleB = data[1];
+  int signA = data[0];
+  int angleA = data[1];
+  int signB = data[2];
+  int angleB = data[3];
+
+  if (signA == 1) {
+    angleA *= -1;
+  }
+  if (signB == 1) {
+    angleB *= -1;
+  }
 
   long pos[2];
   pos[0] = (int)(angleA * STEPPER_A_RATIO * STEPS_PER_REV / 360.0);

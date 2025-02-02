@@ -22,9 +22,11 @@ class Commander:
             print(f"No response received (timeout)")
 
     def move_arm(self, ser_idx, angleA, angleB):
-        angleA = list(angleA.to_bytes(1, "big"))
-        angleB = list(angleB.to_bytes(1, "big"))
-        self.send_command(ser_idx, 0x00, angleA + angleB)
+        signA = list(int(angleA < 0).to_bytes(1, "big"))
+        signB = list(int(angleB < 0).to_bytes(1, "big"))
+        angleA = list(abs(angleA).to_bytes(1, "big"))
+        angleB = list(abs(angleB).to_bytes(1, "big"))
+        self.send_command(ser_idx, 0x00, signA + angleA + signB + angleB)
 
     def move_endo_wrist(self, ser_idx, wrist_idx, potA, potB, potC, potD):
         wrist_idx = list(wrist_idx.to_bytes(1, "big"))
