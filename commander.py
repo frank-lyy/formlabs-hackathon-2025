@@ -14,6 +14,13 @@ class Commander:
         print("Sending:", list(to_send))
         self.ser[ser_idx].write(to_send)
 
+        resp = self.ser[ser_idx].read(2)
+
+        if len(resp) == 2 and resp[0] == 0xFF:
+            print(f"Arduino responded with code {resp[1]}")
+        else:
+            print(f"No response received (timeout)")
+
     def move_arm(self, ser_idx, angleA, angleB):
         angleA = list(angleA.to_bytes(1, "big"))
         angleB = list(angleB.to_bytes(1, "big"))
@@ -27,13 +34,12 @@ class Commander:
         self.send_command(ser_idx, 0x01, potA + potB + potC + potD)
 
 def main():
-    ser0 = serial.Serial(port="/dev/ttyACM0", baudrate=9600, timeout=1) 
+    ser0 = serial.Serial(port="/dev/ttyACM0", baudrate=9600, timeout=5) 
     commander = Commander(ser0, None)
-    time.sleep(3)
+    time.sleep(1)
 
-    commander.move_wrist(0, 1000, 1000, 1000, 1000)
-    #time.sleep(3)
-    #commander.move_arm(0, 180, 180)
+    commander.move_wrist(0, 500, 500, 500, 100)
+    commander.move_arm(0, 180, 180)
 
 if __name__ == "__main__":
     main()
