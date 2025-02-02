@@ -110,7 +110,7 @@ def ik(plant, plant_context, frame, pose, translation_error=0, rotation_error=0.
     # print(f"IK Runtime: {time.time() - ik_start}")
 
     if solve_success == False:
-        print(f"ERROR: IK fail: {ik_result.get_solver_id().name()}. Returning Best Guess.")
+        print(f"ERROR: IK to pose {pose} fail: {ik_result.get_solver_id().name()}. Returning Best Guess.")
         return ik_result.GetSolution(q_variables), False
     
     return q, True

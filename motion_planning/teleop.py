@@ -1,5 +1,5 @@
 """
-Template file that allows teleoperation of robots in all 9 scenes.
+Buggy Teleop helper program. See comment at top of motion_planning/main.py
 """
 
 from pydrake.all import (
