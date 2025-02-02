@@ -1,0 +1,1 @@
+controller_joint_names: ['', 'joint_base_link_arms_mount', 'joint_arms_mount_arm_left', 'joint_arm_left_wrist_left', 'joint_wrist_left_endowrist_left', 'joint_arms_mount_arm_right', 'joint_arm_right_wrist_right', 'joint_wrist_right_endowrist_right', ]
