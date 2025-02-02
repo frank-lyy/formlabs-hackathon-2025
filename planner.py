@@ -5,12 +5,13 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from scipy.spatial.transform import Rotation as R
 from scipy.interpolate import splprep, splev
+from sklearn.decomposition import PCA
 from fastdtw import fastdtw
 from scipy.spatial.distance import euclidean
 from enum import Enum
 
 TEST_TEMPLATE = np.array([[-1, 0], [0, 0], [0, 1]])  # 90-degree bend
-WINDOW_SIZE = 10
+WINDOW_SIZE = 5
 
 class SegmentType(Enum):
     SEGMENT = "tan" # cool but boring color
@@ -20,19 +21,18 @@ class SegmentType(Enum):
     def color(segment_type):
         return segment_type.value
 
-# Curve fitting function
-def template_curve(x, a, b, c):
-    return a * x**2 + b * x + c
+# Compute arc-length parameterization
+def arc_length_param(points):
+    distances = np.linalg.norm(np.diff(points, axis=0), axis=1)
+    cumulative_length = np.insert(np.cumsum(distances), 0, 0)
+    return cumulative_length / cumulative_length[-1]  # Normalize to [0, 1]
 
-# Fit a spline through given points
-def fit_spline(points, degree=2):
-    tck, _ = splprep(points.T, s=0, k=degree)
-    return tck
-
-# Evaluate a spline at given points
-def evaluate_spline(tck, num_points=100):
-    u = np.linspace(0, 1, num_points)
-    return np.array(splev(u, tck)).T
+# Resample a curve using arc-length parameterization
+def resample_curve(points, num_points=100):
+    tck, _ = splprep(points.T, s=0, k=2)
+    arc_lens = arc_length_param(points)
+    new_u = np.linspace(0, 1, num_points)
+    return np.array(splev(new_u, tck)).T
 
 # Compute DTW distance between two curves
 def dtw_distance(curve1, curve2):
@@ -44,19 +44,20 @@ def match_template(pointcloud, template_points, window_size, error_threshold=flo
     best_match = None
     best_error = float('inf')
 
-    # Fit a spline to the template
-    template_spline = fit_spline(template_points)
-    template_curve_points = evaluate_spline(template_spline)
+    # Resample template with arc-length parameterization
+    template_curve_points = resample_curve(template_points)
 
     # Sliding window search
     for i in range(window_size, len(pointcloud) - window_size + 1):
         window = pointcloud[i-window_size:i+window_size]
         window, _, _ = normalize_pointcloud(window)
 
-        # Fit a spline to the window
-        window = window[:, :2]
-        window_spline = fit_spline(window)
-        window_curve_points = evaluate_spline(window_spline)
+        pca = PCA(n_components=2)
+        projected_pts = pca.fit_transform(window)
+        # projected_pts = window
+        window = projected_pts[:, :2]  # Main direction
+
+        window_curve_points = resample_curve(window)
 
         # Compute DTW similarity
         error = dtw_distance(template_curve_points, window_curve_points)
@@ -70,6 +71,7 @@ def match_template(pointcloud, template_points, window_size, error_threshold=flo
                 plt.figure(figsize=(6, 6))
                 plt.plot(template_curve_points[:, 0], template_curve_points[:, 1], 'r-', label="Template Curve")
                 plt.plot(window_curve_points[:, 0], window_curve_points[:, 1], 'bo-', label="Window Points")
+                plt.plot(window[:, 0], window[:, 1], 'g-')
                 plt.legend()
                 plt.title(f"Best Match at index {i} (Error: {best_error:.2f})")
                 plt.xlabel("X")
