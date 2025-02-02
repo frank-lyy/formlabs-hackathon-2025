@@ -1,7 +1,7 @@
 import serial 
 import time
 
-DATA_LEN = 8 # Length of the command exclusing the first 0xFF
+DATA_LEN = 9 # Length of the command exclusing the first 0xFF
 
 class Commander:
     def __init__(self, ser0, ser1):
@@ -26,20 +26,30 @@ class Commander:
         angleB = list(angleB.to_bytes(1, "big"))
         self.send_command(ser_idx, 0x00, angleA + angleB)
 
-    def move_wrist(self, ser_idx, potA, potB, potC, potD):
+    def move_endo_wrist(self, ser_idx, servo_idx, potA, potB, potC, potD):
+        servo_idx = list(servo_idx.to_bytes(1, "big"))
         potA = list(potA.to_bytes(2, "big"))
         potB = list(potB.to_bytes(2, "big"))
         potC = list(potC.to_bytes(2, "big"))
         potD = list(potD.to_bytes(2, "big"))
-        self.send_command(ser_idx, 0x01, potA + potB + potC + potD)
+        self.send_command(ser_idx, 0x01, servo_idx + potA + potB + potC + potD)
+
+    def move_wrist(self, ser_idx, servo_idx, angle):
+        servo_idx = list(servo_idx.to_bytes(1, "big"))
+        angle = list(angle.to_bytes(1, "big"))
+        self.send_command(ser_idx, 0x02, servo_idx + angle)
 
 def main():
-    ser0 = serial.Serial(port="/dev/ttyACM0", baudrate=9600, timeout=5) 
+    ser0 = serial.Serial(port="/dev/ttyACM1", baudrate=9600, timeout=5) 
     commander = Commander(ser0, None)
     time.sleep(1)
 
-    commander.move_wrist(0, 500, 500, 500, 100)
+#    commander.move_endo_wrist(0, 0, 200, 300, 300, 100)
+#    commander.move_endo_wrist(0, 1, 200, 500, 300, 1000)
+#    commander.move_wrist(0, 0, 0)
+#    commander.move_wrist(0, 1, 90)
     commander.move_arm(0, 180, 180)
+    commander.move_arm(0, 0, 90)
 
 if __name__ == "__main__":
     main()

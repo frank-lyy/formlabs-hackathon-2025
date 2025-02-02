@@ -8,17 +8,23 @@ AccelStepper stepperB(AccelStepper::DRIVER, 3, 6);
 MultiStepper steppers;
 
 // Command length
-#define CMD_LEN 10
-#define ACTION_LEN 2
+#define CMD_LEN 11
+#define ACTION_LEN 3
 
 // Servo settings
-#define SERVO_MIN_PULSE_WIDTH 650
-#define SERVO_MAX_PULSE_WIDTH 2350
+#define SERVO_MIN 650
+#define SERVO_MAX 2350
 #define SERVO_FREQ 60
-#define SERVO_A_ID 0
-#define SERVO_B_ID 1
-#define SERVO_C_ID 2
-#define SERVO_D_ID 3
+#define SERVO_A_A_ID 0
+#define SERVO_A_B_ID 1
+#define SERVO_A_C_ID 2
+#define SERVO_A_D_ID 3
+#define SERVO_A_WRIST_ID 5
+#define SERVO_B_A_ID 5
+#define SERVO_B_B_ID 6
+#define SERVO_B_C_ID 7
+#define SERVO_B_D_ID 8
+#define SERVO_B_WRIST_ID 9
 
 // Stepper motor settings
 #define EN_PIN     8
@@ -28,7 +34,7 @@ MultiStepper steppers;
 #define STEPPER_A_RATIO     1.0
 #define STEPPER_B_RATIO     1.0
 
-void moveStepper(uint8_t* data) {
+void moveArm(uint8_t* data) {
   int angleA = data[0];
   int angleB = data[1];
 
@@ -42,11 +48,12 @@ void moveStepper(uint8_t* data) {
   Serial.write(response, sizeof(response));
 }
 
-void moveWrist(uint8_t* data) {
-  int potA = (data[0] << 8) + data[1];
-  int potB = (data[2] << 8) + data[3];
-  int potC = (data[4] << 8) + data[5];
-  int potD = (data[6] << 8) + data[7];
+void moveEndoWrist(uint8_t* data) {
+  int servoIdx = data[0];
+  int potA = (data[1] << 8) + data[2];
+  int potB = (data[3] << 8) + data[4];
+  int potC = (data[5] << 8) + data[6];
+  int potD = (data[7] << 8) + data[8];
 
   int pWideA, pWideB, pWideC, pWideD;     // Pulse_Wide  
   int pWidthA, pWidthB, pWidthC, pWidthD; // Pulse_Width
@@ -55,7 +62,7 @@ void moveWrist(uint8_t* data) {
   int F1, F2; // Flexion Variables
   
   // A -> ABDUCTION
-  pWideA = map(potA, 0, 1023, SERVO_MIN_PULSE_WIDTH, SERVO_MAX_PULSE_WIDTH);
+  pWideA = map(potA, 0, 1023, SERVO_MIN, SERVO_MAX);
   pWidthA = int(float(pWideA) / 1000000 * SERVO_FREQ * 4096);
 
   // JAWS
@@ -71,32 +78,56 @@ void moveWrist(uint8_t* data) {
   // F1 B -> FLEXION_1
   F1 = potB + ((potA-511)/2) + remappedPotC; // Jaw and abduction compensation
   F1 = constrain(F1, 0, 1023);
-  pWideB = map(F1, 0, 1023, SERVO_MIN_PULSE_WIDTH, SERVO_MAX_PULSE_WIDTH);
+  pWideB = map(F1, 0, 1023, SERVO_MIN, SERVO_MAX);
   pWidthB = int(float(pWideB) / 1000000 * SERVO_FREQ * 4096);
   
   // F2 C -> FLEXION_2
   F2 = potB + ((potA-511)/2) - remappedPotC; // Jaw and abduction compensation
   F2 = constrain(F2, 0, 1023);
-  pWideC = map(F2, 0, 1023, SERVO_MIN_PULSE_WIDTH, SERVO_MAX_PULSE_WIDTH);
+  pWideC = map(F2, 0, 1023, SERVO_MIN, SERVO_MAX);
   pWidthC = int(float(pWideC) / 1000000 * SERVO_FREQ * 4096);  
 
   // D -> SHAFT ROTATION
-  pWideD = map(potD, 0, 1023, SERVO_MIN_PULSE_WIDTH, SERVO_MAX_PULSE_WIDTH);
+  pWideD = map(potD, 0, 1023, SERVO_MIN, SERVO_MAX);
   pWidthD = int(float(pWideD) / 1000000 * SERVO_FREQ * 4096);
  
-  servoDriver.setPWM(SERVO_A_ID, 0, pWidthA);
-  servoDriver.setPWM(SERVO_B_ID, 0, pWidthB);
-  servoDriver.setPWM(SERVO_C_ID, 0, pWidthC);
-  servoDriver.setPWM(SERVO_D_ID, 0, pWidthD);
+  if (servoIdx == 0) {
+    servoDriver.setPWM(SERVO_A_A_ID, 0, pWidthA);
+    servoDriver.setPWM(SERVO_A_B_ID, 0, pWidthB);
+    servoDriver.setPWM(SERVO_A_C_ID, 0, pWidthC);
+    servoDriver.setPWM(SERVO_A_D_ID, 0, pWidthD);
+  } else {
+    servoDriver.setPWM(SERVO_B_A_ID, 0, pWidthA);
+    servoDriver.setPWM(SERVO_B_B_ID, 0, pWidthB);
+    servoDriver.setPWM(SERVO_B_C_ID, 0, pWidthC);
+    servoDriver.setPWM(SERVO_B_D_ID, 0, pWidthD);
+  }
+  delay(500);
 
-  delay(100);
   uint8_t response[] = {0xFF, 0x01};
+  Serial.write(response, sizeof(response));
+}
+
+void moveWrist(uint8_t* data) {
+  int servoIdx = data[0];
+  int angle = data[1];
+  int pulse = map(angle, 0, 180, SERVO_MIN, SERVO_MAX);
+
+  if (servoIdx == 0) {
+    servoDriver.setPWM(SERVO_A_WRIST_ID, 0, pulse);
+  } else {
+    servoDriver.setPWM(SERVO_B_WRIST_ID, 0, pulse);
+  }
+  delay(500);
+
+  uint8_t response[] = {0xFF, 0x02};
   Serial.write(response, sizeof(response));
 }
 
 // This defines the command indices
 void (*actions[])(uint8_t*) = {
-  moveStepper,
+  moveArm,
+  moveEndoWrist,
   moveWrist
 };
 
