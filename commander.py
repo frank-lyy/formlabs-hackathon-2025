@@ -7,39 +7,41 @@ class Commander:
     def __init__(self, ser0, ser1):
         self.ser = [ser0, ser1]
 
-    def send_command(self, ser_idx, act_idx, data):
+    def send_command(self, ser_idx, act_idx, data, debug=True):
         while len(data) < self.DATA_LEN:
             data.append(0x00)
         to_send = bytes([0xFF, act_idx] + data)
-        print("Sending:", list(to_send))
+        if debug:
+            print("Sending:", list(to_send))
         self.ser[ser_idx].write(to_send)
 
         resp = self.ser[ser_idx].read(2)
 
-        if len(resp) == 2 and resp[0] == 0xFF:
-            print(f"Arduino responded with code {resp[1]}")
-        else:
-            print(f"No response received (timeout)")
+        if debug:
+            if len(resp) == 2 and resp[0] == 0xFF:
+                print(f"Arduino responded with code {resp[1]}")
+            else:
+                print(f"No response received (timeout)")
 
-    def move_arm(self, ser_idx, angleA, angleB):
+    def move_arm(self, ser_idx, angleA, angleB, debug=True):
         signA = list(int(angleA < 0).to_bytes(1, "big"))
         signB = list(int(angleB < 0).to_bytes(1, "big"))
         angleA = list(abs(angleA).to_bytes(1, "big"))
         angleB = list(abs(angleB).to_bytes(1, "big"))
-        self.send_command(ser_idx, 0x00, signA + angleA + signB + angleB)
+        self.send_command(ser_idx, 0x00, signA + angleA + signB + angleB, debug)
 
-    def move_endo_wrist(self, ser_idx, wrist_idx, potA, potB, potC, potD):
+    def move_endo_wrist(self, ser_idx, wrist_idx, potA, potB, potC, potD, debug=True):
         wrist_idx = list(wrist_idx.to_bytes(1, "big"))
         potA = list(potA.to_bytes(2, "big"))
         potB = list(potB.to_bytes(2, "big"))
         potC = list(potC.to_bytes(2, "big"))
         potD = list(potD.to_bytes(2, "big"))
-        self.send_command(ser_idx, 0x01, wrist_idx + potA + potB + potC + potD)
+        self.send_command(ser_idx, 0x01, wrist_idx + potA + potB + potC + potD, debug)
 
-    def move_wrist(self, ser_idx, servo_idx, angle):
+    def move_wrist(self, ser_idx, servo_idx, angle, debug=True):
         servo_idx = list(servo_idx.to_bytes(1, "big"))
         angle = list(angle.to_bytes(1, "big"))
-        self.send_command(ser_idx, 0x02, servo_idx + angle)
+        self.send_command(ser_idx, 0x02, servo_idx + angle, debug)
 
 def main():
     ser0 = serial.Serial(port="/dev/ttyACM0", baudrate=9600, timeout=5) 

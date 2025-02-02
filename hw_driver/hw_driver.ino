@@ -52,6 +52,7 @@ void moveArm(uint8_t* data) {
   pos[1] = (int)(angleB * STEPPER_B_RATIO * STEPS_PER_REV / 360.0);
   steppers.moveTo(pos);
   steppers.runSpeedToPosition();
+  delay(100);
 
   uint8_t response[] = {0xFF, 0x00};
   Serial.write(response, sizeof(response));
