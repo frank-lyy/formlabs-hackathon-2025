@@ -99,8 +99,11 @@ def main():
             prev_time = time.time()
             blue_data["target_points"] = realtime_track_state(blue_data["source_points"], mask_blue, points)
             orange_data["target_points"] = realtime_track_state(orange_data["source_points"], mask_orange, points)
+            blue_segments = segment_shoelace(blue_data["target_points"])
+            orange_segments = segment_shoelace(orange_data["target_points"])
             blue_data["source_points"] = blue_data["target_points"]
             orange_data["source_points"] = orange_data["target_points"]
+
 
         # Quit
         if cv2.waitKey(1) == ord("q"):
