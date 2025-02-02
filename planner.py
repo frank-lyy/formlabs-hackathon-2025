@@ -7,130 +7,118 @@ from sklearn.decomposition import PCA
 from scipy.optimize import curve_fit
 from enum import Enum
 
-BEND_TEMPLATE = np.array([[-2, 4], [-1, 1], [0, 0.1], [1, 1], [2, 4]])
+TEST_TEMPLATE = np.array([[-2, 4], [-1, 1], [0, 0], [0, 0], [1, 1], [2, 4]])
+WINDOW_SIZE = 3
 
 class SegmentType(Enum):
-    SEGMENT = "red"
-    BEND = "blue"
-    LOOP = "green"
-    END = "purple"
+    SEGMENT = "tan" # cool but boring color
+    FEATURE = "mediumorchid" # unique but vibrant color
 
     @staticmethod
     def color(segment_type):
         return segment_type.value
 
-def detect_bends(pts, tree, k=10, smooth_window=7, poly_order=2):
-    """ Detects bends by computing curvature with a polynomial fit. """
-    curvature = np.zeros(len(pts))
-
-    for i in range(len(pts)):
-        neighbor_indices = range(max(0, i-k), min(len(pts), i+k+1))
-        if len(neighbor_indices) < 2*k:
-            continue
-        local_pts = pts[neighbor_indices]
-
-        # Project to 2D using PCA
-        pca = PCA(n_components=2)
-        projected_pts = pca.fit_transform(local_pts)
-        x, y = projected_pts[:, 0], projected_pts[:, 1]  # Main direction
-
-        x = (x - np.mean(x)) / (np.std(x) + 1e-8)
-        y = (y - np.mean(y)) / (np.std(y) + 1e-8)
-
-        # Fit quadratic y = ax^2 + bx + c
-        coeffs = np.polyfit(x, y, 2)
-        a = coeffs[0]
-
-        # Curvature approximation
-        curvature[i] = 2 * abs(a)  # Higher a = more curvature
-
-    # Smooth curvature values using Savitzky-Golay filter
-    # curvature = savgol_filter(curvature, window_length=smooth_window, polyorder=poly_order, mode='interp')
-    print(np.max(curvature), np.min(curvature))
-    bend_indices = set(np.where(np.abs(curvature) > curvature_threshold)[0])
-    return bend_indices
-
 def template_curve(x, a, b, c):
+    """ Quadratic function to fit the template shape. """
     return a * x**2 + b * x + c
 
-def match_template(pointcloud, template_points, window_size, error_threshold=float('inf')):
+# def pca_align(points):
+#     """ Aligns points using PCA and returns transformed points + rotation matrix. """
+#     mean = np.mean(points, axis=0)
+#     centered = points - mean
+#     U, S, Vt = np.linalg.svd(centered)
+#     return centered @ Vt.T, Vt  # Rotate to align principal axes
+
+def embed_template_3d(template_points):
+    """ Embeds a 2D template into 3D space by assuming it lies in the XY plane. """
+    return np.hstack((template_points, np.zeros((template_points.shape[0], 1))))
+
+# def project_to_plane(points, plane_origin, plane_normal):
+#     """ Projects points onto a plane defined by an origin and normal vector. """
+#     normal = plane_normal / np.linalg.norm(plane_normal)
+#     vectors = points - plane_origin
+#     distances = np.dot(vectors, normal)
+#     projected = points - np.outer(distances, normal)
+#     return projected
+
+def find_optimal_rotation(scatter_points, curve_points):
+    # Center the points
+    # scatter_centered = scatter_points - np.mean(scatter_points, axis=0)
+    # curve_centered = curve_points - np.mean(curve_points, axis=0)
+    
+    # Compute cross-covariance matrix
+    H = np.dot(scatter_points.T, curve_points)
+    
+    # Perform SVD
+    U, S, Vt = np.linalg.svd(H)
+    
+    # Compute rotation matrix
+    R = np.dot(Vt.T, U.T)
+    
+    # Ensure proper rotation (det(R) = 1)
+    if np.linalg.det(R) < 0:
+        Vt[-1,:] *= -1
+        R = np.dot(Vt.T, U.T)
+    
+    return R
+
+def match_template(pointcloud, template, window_size, error_threshold=float('inf'), visualize=False):
     best_match = None
     best_error = float('inf')
 
-    # Project to 2D using PCA
-    pca = PCA(n_components=2)
-    projected_pointcloud = pca.fit_transform(pointcloud)
-    normalized_template_points, _, _ = normalize_pointcloud(template_points)
-    
-    # Fit a curve to the template points
-    x_template = np.array([p[0] for p in normalized_template_points])
-    y_template = np.array([p[1] for p in normalized_template_points])
+    # Embed 2D template into 3D
+    template_3d = embed_template_3d(template)
+    template_3d_normalized, _, _ = normalize_pointcloud(template_3d)
+    x_template = template_3d_normalized[:, 0]
+    y_template = template_3d_normalized[:, 1]
     params, _ = curve_fit(template_curve, x_template, y_template)
-    
-    # Perform a sliding window scan
-    for i in range(window_size, len(projected_pointcloud)-window_size):
-        window = projected_pointcloud[i-window_size:i+window_size]
-        normalized_window, _, _ = normalize_pointcloud(window)
-        x_window = np.array([p[0] for p in normalized_window])
-        y_window = np.array([p[1] for p in normalized_window])
-        
-        # Compute error between window points and template curve
+    print(params)
+
+    # Sliding window search
+    for i in range(window_size, len(pointcloud) - window_size + 1):
+        window = pointcloud[i-window_size:i+window_size]
+        window_normalized, _, _ = normalize_pointcloud(window)
+
+        window_rotation = find_optimal_rotation(window_normalized, template_3d_normalized)
+        rotated_window = window_normalized @ window_rotation.T
+
+        x_window = rotated_window[:, 0]
+        y_window = rotated_window[:, 1]
+        # Fit the template curve to the window
         y_fitted = template_curve(x_window, *params)
         error = np.sum((y_window - y_fitted) ** 2)
-        
+
         if error < best_error and error < error_threshold:
             best_error = error
             best_match = i
-
-            # Plot the best match found so far
-            plt.figure(figsize=(6, 4))
-            plt.plot(x_window, y_window, 'bo-', label="Window Points")
-            plt.plot(x_window, y_fitted, 'r-', label="Fitted Curve")
-            plt.legend()
-            plt.title(f"Best Match at index {i} (Error: {best_error:.2f})")
-            plt.xlabel("X")
-            plt.ylabel("Y")
-            plt.show()
+            
+            if visualize:
+                # Plot best match
+                fig = plt.figure(figsize=(6, 6))
+                ax = fig.add_subplot(111, projection='3d')
+                ax.plot(x_window, y_window, 'bo-', label="Window Points")
+                ax.plot(x_window, y_fitted, 'r-', label="Fitted Curve")
+                ax.legend()
+                ax.set_title(f"Best Match at index {i} (Error: {best_error:.2f})")
+                ax.set_xlabel("X")
+                ax.set_ylabel("Y")
+                ax.set_zlabel("Z")
+                plt.show()
     
     return best_match, best_error
 
-def segment_shoelace(points, curvature_threshold=0.3, loop_threshold=0.005):
-    """
-    Labels the points of an ordered shoelace point cloud into segments, bends, and loops.
-    """
-    normalized_points, _, _ = normalize_pointcloud(points)
-    tree = KDTree(normalized_points)
 
-    def detect_loops(pts, tree, loop_threshold=loop_threshold):
-        """ Detect possible loops by looking at proximity """
-        loop_indices = []
-        for i, point in enumerate(pts):
-            neighbors = tree.query_ball_point(point, r=loop_threshold)
-            for j in neighbors:
-                if j < i:
-                    continue # skip out on previous points
-                elif j-i > 20:  # Ensure it's a non-trivial loop
-                    loop_indices.append((i, j))
-                    i = j  # Skip ahead to the next point
-                    break
-        return loop_indices
-
+def pointcloud_to_segments(points, template=TEST_TEMPLATE, window_size=WINDOW_SIZE, visualize=False):
+    """
+    Labels the points of an ordered shoelace point cloud into indices for the segment or feature
+    """
     labels = [SegmentType.color(SegmentType.SEGMENT) for _ in range(points.shape[0])]
 
-    # Detect bends
-    window_size = 5
-    best_index, best_error = match_template(normalized_points, BEND_TEMPLATE, window_size)
+    # Detect Feature
+    best_index, best_error = match_template(points, template=template, window_size=window_size, visualize=visualize)
     if best_index is not None:
         for i in range(best_index-window_size, best_index+window_size):
-            labels[i] = SegmentType.color(SegmentType.BEND)
-
-    # Detect loops
-    loop_indices = detect_loops(normalized_points, tree)
-    for loop_start, loop_end in loop_indices:
-        for i in range(loop_start, loop_end):
-            labels[i] = SegmentType.color(SegmentType.LOOP)
-
-    labels[-1] = SegmentType.color(SegmentType.END)
+            labels[i] = SegmentType.color(SegmentType.FEATURE)
 
     return labels
 
@@ -157,15 +145,23 @@ def visualize_segments(points, labels):
 
 if __name__ == "__main__":
     data = load_data("data/data2.npz")
-    cleaned_data = clean_data(data)
+    quad_mask = create_quad_mask(data['mask'][0].shape, corners=CORNERS)
+    cleaned_data = {'points': []}
+    cleaned_data['initial_points'] = clean_data(data['mask'][0], data['points'][0], quad_mask)
+    for i in range(1, len(data['points'])):
+        cleaned_data['points'].append(clean_data(data['mask'][i], data['points'][i], quad_mask))
     source_pointcloud = cleaned_data['initial_points']
     source_pointcloud = initial_pointcloud_order(source_pointcloud)
-    segments = segment_shoelace(source_pointcloud)
+    segments = pointcloud_to_segments(source_pointcloud, visualize=False)
     visualize_segments(source_pointcloud, segments)
 
     for i in range(len(cleaned_data['points'])):
         target_pointcloud = cleaned_data['points'][i]
         ordered_target_pointcloud = track_state(source_pointcloud, target_pointcloud, visualize=False)
-        segments = segment_shoelace(ordered_target_pointcloud)
+        if i < 5:
+            visualize = False
+        else:
+            visualize = True
+        segments = pointcloud_to_segments(ordered_target_pointcloud, visualize=visualize)
         visualize_segments(ordered_target_pointcloud, segments)
         source_pointcloud = ordered_target_pointcloud
