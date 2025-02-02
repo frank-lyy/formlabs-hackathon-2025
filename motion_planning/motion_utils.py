@@ -35,7 +35,7 @@ def diagram_visualize_connections(diagram: Diagram, file: Union[BinaryIO, str]) 
     file.write(svg_data)
     
 
-def ik(plant, plant_context, frame, pose, translation_error=0, rotation_error=0.05, regions=None, pose_as_constraint=True) -> tuple[np.ndarray, bool]:
+def ik(plant, plant_context, frame, pose, rotation_offset=RotationMatrix(), translation_error=0, rotation_error=0.05, regions=None, pose_as_constraint=True) -> tuple[np.ndarray, bool]:
     """
     Use Inverse Kinematics to solve for a configuration that satisfies a
     task-space pose for a given frame. 
@@ -80,7 +80,7 @@ def ik(plant, plant_context, frame, pose, translation_error=0, rotation_error=0.
                 frameAbar=plant.world_frame(),
                 R_AbarA=pose.rotation(),
                 frameBbar=frame,
-                R_BbarB=RotationMatrix(),
+                R_BbarB=rotation_offset,
                 theta_bound=rotation_error,
             )
             ik_prog.AddQuadraticErrorCost(np.identity(len(q_variables)), q_nominal, q_variables)
@@ -110,33 +110,59 @@ def ik(plant, plant_context, frame, pose, translation_error=0, rotation_error=0.
     # print(f"IK Runtime: {time.time() - ik_start}")
 
     if solve_success == False:
-        print(f"ERROR: IK fail: {ik_result.get_solver_id().name()}. Returning Best Guess.")
+        print(f"ERROR: IK to pose {pose} fail: {ik_result.get_solver_id().name()}. Returning Best Guess.")
         return ik_result.GetSolution(q_variables), False
     
     return q, True
 
 
-def average_transform(X1: RigidTransform, X2: RigidTransform, alpha: float = 0.5) -> RigidTransform:
-    """
-    Computes an interpolated RigidTransform between X1 and X2.
-    
-    Args:
-        X1 (RigidTransform): First transformation.
-        X2 (RigidTransform): Second transformation.
-        alpha (float): Interpolation weight (default is 0.5, meaning midpoint).
-    
-    Returns:
-        RigidTransform: The interpolated transformation.
-    """
-    # Interpolate translation
-    p1, p2 = X1.translation(), X2.translation()
-    p_avg = (1 - alpha) * p1 + alpha * p2  # Linear interpolation
+def get_left_right_joint_indices(plant, endowrist_left_model_instance_idx, 
+                                 endowrist_right_model_instance_idx, arms_model_instance_idx) -> tuple[list[int], list[int]]:
+    # Collect joint indices for left and right arms
+    left_arm_joint_names = [
+        "joint_arms_mount_arm_left",
+        "joint_arm_left_wrist_left",
+        "joint_wrist_left_endowrist_left",
+        # Endowrist joints for left arm
+        "joint_endowrist_box_endowrist_tube",
+        "joint_endowrist_tube_endowrist_body",
+        "joint_endowrist_body_endowrist_forcep1",
+        "joint_endowrist_body_endowrist_forcep2"
+    ]
 
-    # Convert rotation matrices to quaternions
-    q1, q2 = Quaternion(X1.rotation()), Quaternion(X2.rotation())
+    right_arm_joint_names = [
+        "joint_arms_mount_arm_right",
+        "joint_arm_right_wrist_right",
+        "joint_wrist_right_endowrist_right",
+        # Endowrist joints for right arm
+        "joint_endowrist_box_endowrist_tube",
+        "joint_endowrist_tube_endowrist_body",
+        "joint_endowrist_body_endowrist_forcep1",
+        "joint_endowrist_body_endowrist_forcep2"
+    ]
 
-    # Perform spherical linear interpolation (slerp)
-    q_avg = q1.slerp(alpha, q2)
+    # Get indices for left arm joints
+    left_arm_joint_indices = []
+    for joint_name in left_arm_joint_names:
+        try:
+            if joint_name.startswith("joint_endowrist"):
+                joint = plant.GetJointByName(joint_name, endowrist_left_model_instance_idx)
+            else:
+                joint = plant.GetJointByName(joint_name, arms_model_instance_idx)
+            left_arm_joint_indices.append(joint.position_start())
+        except RuntimeError:
+            print(f"Warning: Could not find joint {joint_name}")
 
-    # Construct the averaged RigidTransform
-    return RigidTransform(RotationMatrix(q_avg), p_avg)
+    # Get indices for right arm joints
+    right_arm_joint_indices = []
+    for joint_name in right_arm_joint_names:
+        try:
+            if joint_name.startswith("joint_endowrist"):
+                joint = plant.GetJointByName(joint_name, endowrist_right_model_instance_idx)
+            else:
+                joint = plant.GetJointByName(joint_name, arms_model_instance_idx)
+            right_arm_joint_indices.append(joint.position_start())
+        except RuntimeError:
+            print(f"Warning: Could not find joint {joint_name}")
+            
+    return left_arm_joint_indices, right_arm_joint_indices

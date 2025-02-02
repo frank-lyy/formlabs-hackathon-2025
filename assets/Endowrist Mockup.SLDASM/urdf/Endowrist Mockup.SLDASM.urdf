@@ -109,7 +109,7 @@
       lower="-3.92699"
       upper="3.92699"
       effort="300"
-      velocity="10" />
+      velocity="2" />
   </joint>
   <link
 
@@ -167,7 +167,7 @@
       lower="-1.183"
       upper="1.183"
       effort="300"
-      velocity="10" />
+      velocity="2" />
   </joint>
   <link
 
@@ -197,7 +197,7 @@
       <material
         name="">
         <color
-          rgba="0.79216 0.81961 0.93333 1" />
+          rgba="1 0.81961 0.93333 1" />
       </material>
     </visual>
     <collision>
@@ -225,7 +225,7 @@
       lower="-2.06140838"
       upper="2.06140838"
       effort="300"
-      velocity="10" />
+      velocity="2" />
   </joint>
   <link
     name="endowrist_forcep2">
@@ -254,7 +254,7 @@
       <material
         name="">
         <color
-          rgba="0.79216 0.81961 0.93333 1" />
+          rgba="0.79216 0.81961 1 1" />
       </material>
     </visual>
     <collision>
@@ -282,7 +282,7 @@
       lower="-2.06140838"
       upper="2.06140838"
       effort="300"
-      velocity="10" />
+      velocity="2" />
   </joint>
 
 

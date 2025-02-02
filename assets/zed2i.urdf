@@ -1,0 +1,115 @@
+<?xml version="1.0"?>
+<robot name="zed2i_camera" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+  <!-- 1) Base link (root of the camera)                                       -->
+  <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+  <link name="base_link">
+    <!-- You can add inertia here if Drake complains or if you want a physical model -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+
+  <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+  <!-- 2) Camera center link                                                   -->
+  <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+  <link name="zed2i_camera_center">
+    <visual>
+      <!-- For ZED2i: screw_offset_x = -0.01, screw_offset_z = 0.0 -->
+      <origin xyz="-0.01 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://assets/zed2i.obj"/>
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.252941176470588 0.252941176470588 0.252941176470588 1" />
+      </material>
+    </visual>
+
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+
+  <!-- For ZED2i: height = 0.03 => height/2 = 0.015, bottom_slope = 0.0 -->
+  <joint name="zed2i_camera_center_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="zed2i_camera_center"/>
+    <origin xyz="0 0 0.015" rpy="0 0 0"/>
+  </joint>
+
+
+  <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+  <!-- 3) Left camera frames                                                   -->
+  <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+  <link name="zed2i_left_camera_frame">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+
+  <!-- baseline = 0.12, optical_offset_x = -0.01; so left camera is at (x, y) = (-0.01, +0.06) -->
+  <joint name="zed2i_left_camera_joint" type="fixed">
+    <parent link="zed2i_camera_center"/>
+    <child link="zed2i_left_camera_frame"/>
+    <origin xyz="-0.01 0.06 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="zed2i_left_camera_optical_frame">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+
+  <!-- Optical frames are typically rotated so +Z is forward, +X is right, +Y is down -->
+  <!-- The URDF snippet uses rpy="-π/2, 0, -π/2" which is common for ROS optical frames. -->
+  <joint name="zed2i_left_camera_optical_joint" type="fixed">
+    <parent link="zed2i_left_camera_frame"/>
+    <child link="zed2i_left_camera_optical_frame"/>
+    <origin xyz="0 0 0" rpy="-1.57079632679 0 -1.57079632679"/>
+  </joint>
+
+
+  <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+  <!-- 4) Right camera frames                                                  -->
+  <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
+  <link name="zed2i_right_camera_frame">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+
+  <!-- Right camera is at (x, y) = (-0.01, -0.06) -->
+  <joint name="zed2i_right_camera_joint" type="fixed">
+    <parent link="zed2i_camera_center"/>
+    <child link="zed2i_right_camera_frame"/>
+    <origin xyz="-0.01 -0.06 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="zed2i_right_camera_optical_frame">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+
+  <joint name="zed2i_right_camera_optical_joint" type="fixed">
+    <parent link="zed2i_right_camera_frame"/>
+    <child link="zed2i_right_camera_optical_frame"/>
+    <origin xyz="0 0 0" rpy="-1.57079632679 0 -1.57079632679"/>
+  </joint>
+
+</robot>
