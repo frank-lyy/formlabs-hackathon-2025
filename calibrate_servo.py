@@ -13,18 +13,22 @@ def main(stdscr):
     stdscr.nodelay(True)
 
     move_thread = None
-    angles = [0] * 10
+    angles = [90] * 10
     prev_angles = [0] * 10
-    keys = "qwertyuiop"
+    up_keys = "qwertyuiop"
+    down_keys = "asdfghjkl;"
 
     try:
         while True:
             keycode = stdscr.getch()
             if keycode != -1:
                 key = chr(keycode)
-                for i, char in enumerate(keys):
+                for i, char in enumerate(up_keys):
                     if key == char:
                         angles[i] += 1
+                for i, char in enumerate(down_keys):
+                    if key == char:
+                        angles[i] -= 1
 
             for i, angle in enumerate(angles):
                 angles[i] = max(0, min(angle, 180))
