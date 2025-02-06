@@ -165,7 +165,9 @@ def get_corner_points(frame):
             print("Returning from get_corner_points: None")
             return None
     
+    assert len(corners) == 4, "Need 4 corner points"
     print("Returning from get_corner_points:", corners)
+    cv2.destroyWindow(window_name)
     return np.array(corners)
 
 def main(stop_event):
