@@ -119,7 +119,7 @@ def pc_registration(pointcloud_1, pointcloud_2, visualize=False):
     
     return TY
 
-def resample_points_with_bspline(points, s=0.1, k=3, min_points=30):
+def resample_points_with_bspline(points, s=0.1, k=5, min_points=30):
     """
     Fit a B-spline to the points and resample to get at least min_points points.
     Maintains the ordering of points along the spline.
