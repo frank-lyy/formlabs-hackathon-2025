@@ -137,28 +137,27 @@ def resample_points_with_bspline(points, s=0.1, k=5, min_points=30):
 def track_state(source_pointcloud, target_pointcloud, visualize=False):
     TY = pc_registration(source_pointcloud, target_pointcloud, visualize=visualize)
 
-    nn = NearestNeighbors(n_neighbors=5, algorithm='kd_tree')
-    nn.fit(target_pointcloud)
+    nn = NearestNeighbors(n_neighbors=1, algorithm='kd_tree')
+    nn.fit(TY)
 
-    distances, indices = nn.kneighbors(TY)
+    distances, indices = nn.kneighbors(target_pointcloud)
 
     # Create a mapping of each unique target index to all the TY points that map to it
     source_to_target = {}
-    seen_indices = set()
-    for source_idx, (target_idx, dist) in enumerate(zip(indices.flatten(), distances.flatten())):
-        if target_idx in seen_indices:
-            continue
-        else:
-            seen_indices.add(target_idx)
+    for target_idx, source_idx in enumerate(indices.flatten()):
         if source_idx not in source_to_target:
-            source_to_target[source_idx] = set([target_idx])
+            source_to_target[source_idx] = [target_idx]
         else:
-            source_to_target[source_idx].add(target_idx)
+            source_to_target[source_idx].append(target_idx)
     
     # Iterate through the source indices and find the target indices that map to each source index
     # ordering by the minimum distance to the previous picked point
     ordered_target_indices = []
-    for source_idx, target_indices in source_to_target.items():
+    for source_idx in range(TY.shape[0]):
+        if source_idx not in source_to_target:
+            continue
+
+        target_indices = source_to_target[source_idx]
         if ordered_target_indices:
             previous_point = target_pointcloud[ordered_target_indices[-1]]
             target_indices = sorted(target_indices, key=lambda x: np.linalg.norm(target_pointcloud[x] - previous_point))
