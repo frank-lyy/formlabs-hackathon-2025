@@ -119,14 +119,15 @@ def pc_registration(pointcloud_1, pointcloud_2, visualize=False):
     
     return TY
 
-def resample_points_with_bspline(points, min_points=100):
+def resample_points_with_bspline(points, min_points=50):
     """
     Fit a B-spline to the points and resample to get at least min_points points.
     Maintains the ordering of points along the spline.
     """
-    if len(points) < 4 or len(points) > min_points: 
+    if len(points) < 10 or len(points) > min_points: 
         return points
-        
+    
+    print("resampling!")
     # Parameter space for original points (cumulative chord length)
     t = np.zeros(len(points))
     for i in range(1, len(points)):
@@ -134,7 +135,7 @@ def resample_points_with_bspline(points, min_points=100):
     t = t / t[-1]  # Normalize to [0, 1]
     
     # Fit B-spline for each dimension
-    k = 3  # cubic spline
+    k = 9
     bsplines = []
     for dim in range(points.shape[1]):
         spl = make_interp_spline(t, points[:, dim], k=k)
@@ -176,7 +177,7 @@ def track_state(source_pointcloud, target_pointcloud, visualize=False):
     final_source_indices = sorted(final_source_indices, key=lambda x: x[0])
     ordered_target_indices = [target_idx for _, target_idx in final_source_indices]
     ordered_target_pointcloud = target_pointcloud[ordered_target_indices, :]
-    ordered_target_pointcloud = resample_points_with_bspline(ordered_target_pointcloud, min_points=100)
+    ordered_target_pointcloud = resample_points_with_bspline(ordered_target_pointcloud)
 
     if visualize:
         # color based on increasing index
