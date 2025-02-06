@@ -217,15 +217,14 @@ def main(stop_event):
             cleaned_orange_image = np.zeros_like(image)
             cleaned_blue_image = np.zeros_like(image)
             # Copy original pixels
-            for point in cleaned_orange:
-                x, y = point.astype(int)
-                if 0 <= y < image.shape[0] and 0 <= x < image.shape[1]:
-                    cleaned_orange_image[y, x] = image[y, x]
+            for idx in range(cleaned_orange.shape[0]):
+                x, y = cleaned_orange[idx][0], cleaned_orange[idx][1]
+                print(x)
+                cleaned_orange_image[y, x] = image[y, x]
                 
-            for point in cleaned_blue:
-                x, y = point.astype(int)
-                if 0 <= y < image.shape[0] and 0 <= x < image.shape[1]:
-                    cleaned_blue_image[y, x] = image[y, x]
+            for idx in range(cleaned_blue.shape[0]):
+                x, y = cleaned_blue[idx][0], cleaned_blue[idx][1]
+                cleaned_blue_image[y, x] = image[y, x]
 
             side_by_side = cv2.hconcat([cleaned_orange_image, cleaned_blue_image])
             cv2.imshow("Orange | Blue", side_by_side)
