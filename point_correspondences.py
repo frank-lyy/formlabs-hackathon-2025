@@ -7,6 +7,7 @@ from pycpd import DeformableRegistration
 import matplotlib.pyplot as plt
 from functools import partial
 from sklearn.neighbors import NearestNeighbors
+from scipy.interpolate import BSpline, make_interp_spline
 
 def get_pointcloud_from_image(filename, width, height, remove_sides=False):
     depth_image = get_depth(filename+"_Depth.raw", width, height)
@@ -118,6 +119,38 @@ def pc_registration(pointcloud_1, pointcloud_2, visualize=False):
     
     return TY
 
+def resample_points_with_bspline(points, min_points=100):
+    """
+    Fit a B-spline to the points and resample to get at least min_points points.
+    Maintains the ordering of points along the spline.
+    """
+    if len(points) < 4 or len(points) > min_points: 
+        return points
+        
+    # Parameter space for original points (cumulative chord length)
+    t = np.zeros(len(points))
+    for i in range(1, len(points)):
+        t[i] = t[i-1] + np.linalg.norm(points[i] - points[i-1])
+    t = t / t[-1]  # Normalize to [0, 1]
+    
+    # Fit B-spline for each dimension
+    k = 3  # cubic spline
+    bsplines = []
+    for dim in range(points.shape[1]):
+        spl = make_interp_spline(t, points[:, dim], k=k)
+        bsplines.append(spl)
+    
+    # Calculate number of points needed
+    n_points = max(2 * min_points, len(points))
+    
+    # Sample points
+    t_new = np.linspace(0, 1, n_points)
+    resampled_points = np.zeros((n_points, points.shape[1]))
+    for dim in range(points.shape[1]):
+        resampled_points[:, dim] = bsplines[dim](t_new)
+    
+    return resampled_points
+
 def track_state(source_pointcloud, target_pointcloud, visualize=False):
     TY = pc_registration(source_pointcloud, target_pointcloud, visualize=visualize)
 
@@ -143,6 +176,7 @@ def track_state(source_pointcloud, target_pointcloud, visualize=False):
     final_source_indices = sorted(final_source_indices, key=lambda x: x[0])
     ordered_target_indices = [target_idx for _, target_idx in final_source_indices]
     ordered_target_pointcloud = target_pointcloud[ordered_target_indices, :]
+    ordered_target_pointcloud = resample_points_with_bspline(ordered_target_pointcloud, min_points=100)
 
     if visualize:
         # color based on increasing index
