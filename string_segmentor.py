@@ -95,14 +95,14 @@ def get_position_from_index(string_name, idx):
 
 def get_mask_orange(image):
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    lower_bound = np.array([0, 170, 100])
-    upper_bound = np.array([25, 255, 255])
+    lower_bound = np.array([15, 160, 150])
+    upper_bound = np.array([30, 255, 255])
     return cv2.inRange(image_hsv, lower_bound, upper_bound)
 
 def get_mask_blue(image):
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    lower_bound = np.array([100, 20, 30])
-    upper_bound = np.array([179, 255, 255])
+    lower_bound = np.array([135, 0, 60])
+    upper_bound = np.array([179, 85, 140])
     return cv2.inRange(image_hsv, lower_bound, upper_bound)
 
 def get_masked_image(image, mask):
