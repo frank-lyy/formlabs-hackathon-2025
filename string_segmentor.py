@@ -134,11 +134,7 @@ def get_corner_points(frame):
             cv2.putText(frame, str(len(corners)), (x+10, y+10), 
                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
             cv2.imshow(window_name, frame)
-            
-            if len(corners) == 4:
-                cv2.waitKey(500)  # Give time to see the last point
-                cv2.destroyWindow(window_name)
-    
+
     # Create window and set mouse callback
     cv2.namedWindow(window_name)
     cv2.setMouseCallback(window_name, mouse_callback)
@@ -162,11 +158,12 @@ def get_corner_points(frame):
     cv2.imshow(window_name, instruction_frame)
     
     # # Wait for points selection or quit
-    # while len(corners) < 4:
-    #     key = cv2.waitKey(1) & 0xFF
-    #     if key == ord('q'):
-    #         cv2.destroyWindow(window_name)
-    #         return None
+    while len(corners) < 4:
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('q'):
+            cv2.destroyWindow(window_name)
+            print("Returning from get_corner_points: None")
+            return None
     
     print("Returning from get_corner_points:", corners)
     return np.array(corners)
