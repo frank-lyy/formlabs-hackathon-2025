@@ -27,6 +27,9 @@ AccelStepper stepperB(AccelStepper::DRIVER, 3, 6);
 #define SERVO_B_C_ID 7
 #define SERVO_B_D_ID 8
 
+#define SERVO_LEFT_WRIST_ZERO 121.5  // deg
+#define SERVO_RIGHT_WRIST_ZERO 50  // deg
+
 // Stepper motor settings
 #define EN_PIN 8                 // Enable pin for stepper drivers
 #define STEPS_PER_REV 200        // Steps per revolution (depends on your stepper motor)
@@ -192,8 +195,14 @@ void moveWrist(uint8_t* data) {
   int servoIdx = data[0];
   int angle = data[1];
 
+  if (servo_idx == 4) {
+    int angle_offset = SERVO_LEFT_WRIST_ZERO;
+  } else if (servo_idx == 9) {
+    int angle_offset = SERVO_RIGHT_WRIST_ZERO;
+  }
+
   // Map the angle to the servo pulse width (in PCA9685 counts)
-  int pulse = map(angle, 0, 180, SERVO_MIN, SERVO_MAX);
+  int pulse = map(angle + angle_offset, 0, 180, SERVO_MIN, SERVO_MAX);
   servoDriver.setPWM(servoIdx, 0, pulse);
   delay(500);
 
