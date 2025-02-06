@@ -161,12 +161,12 @@ def get_corner_points(frame):
     
     cv2.imshow(window_name, instruction_frame)
     
-    # Wait for points selection or quit
-    while len(corners) < 4:
-        key = cv2.waitKey(1) & 0xFF
-        if key == ord('q'):
-            cv2.destroyWindow(window_name)
-            return None
+    # # Wait for points selection or quit
+    # while len(corners) < 4:
+    #     key = cv2.waitKey(1) & 0xFF
+    #     if key == ord('q'):
+    #         cv2.destroyWindow(window_name)
+    #         return None
     
     print("Returning from get_corner_points:", corners)
     return np.array(corners)
@@ -180,17 +180,6 @@ def main(stop_event):
     while not stop_event.is_set():
         # Get data
         image, depth, points = get_camera_data(zed)
-
-        # Get masked image
-        mask_orange = get_mask_orange(image)
-        mask_blue = get_mask_blue(image)
-        image_orange = get_masked_image(image, mask_orange)
-        image_blue = get_masked_image(image, mask_blue)
-
-        # Show frame
-        cv2.imshow("image", image)
-        cv2.imshow("orange", image_orange)
-        cv2.imshow("blue", image_blue)
 
         # Store data
         if time.time() - prev_time > 3 and record_data:
