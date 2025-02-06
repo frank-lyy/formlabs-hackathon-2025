@@ -4,7 +4,7 @@ from pydrake.all import (
 )
 from manipulation.meshcat_utils import AddMeshcatTriad
 
-from string_segmentor import get_feature_idx, get_position_index, get_position_from_index
+from string_segmentor import get_feature_index, get_position_index, get_position_from_index
 
 import yaml
 import numpy as np
@@ -68,7 +68,7 @@ class HighLevelPlanner():
             "plant": self.plant,
             "plant_context": self.plant_context,
             "p": self,
-            "get_feature_idx": get_feature_idx,
+            "get_feature_index": get_feature_index,
             "get_position_index": get_position_index,
             "get_position_from_index": get_position_from_index,
             "transform_point_camera_to_world_frame": self.transform_point_camera_to_world_frame,
