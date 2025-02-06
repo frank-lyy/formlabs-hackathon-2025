@@ -49,7 +49,7 @@ class Commander:
         self.send_command(ser_idx, 0x02, servo_idx + angle, debug)
 
 def main():
-    ser0 = serial.Serial(port="/dev/ttyACM0", baudrate=9600, timeout=5) 
+    ser0 = serial.Serial(port="/dev/ttyACM1", baudrate=9600, timeout=5) 
     commander = Commander(ser0, None)
     time.sleep(1)
 
@@ -73,11 +73,11 @@ def main():
 
             elif command == 1:
                 wrist_idx = int(input("Wrist index: "))
-                potA = int(input("Pot A: "))
-                potB = int(input("Pot B: "))
-                potC = int(input("Pot C: "))
-                potD = int(input("Pot D: "))
-                commander.move_endo_wrist(target, wrist_idx, potA, potB, potC, potD)
+                angleA = int(input("Angle A: "))
+                angleB = int(input("Angle B: "))
+                angleC = int(input("Angle C: "))
+                angleD = int(input("Angle D: "))
+                commander.move_endo_wrist(target, wrist_idx, angleA, angleB, angleC, angleD)
 
             elif command == 2:
                 servo_idx = int(input("Servo index: "))

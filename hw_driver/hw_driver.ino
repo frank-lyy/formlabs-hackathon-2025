@@ -35,8 +35,8 @@ AccelStepper stepperB(AccelStepper::DRIVER, 3, 6);
 #define STEPS_PER_REV 200        // Steps per revolution (depends on your stepper motor)
 #define STEPPER_A_RATIO 1.0      // Gear ratio or offset for stepper A
 #define STEPPER_B_RATIO 1.0      // Gear ratio or offset for stepper B
-#define STEPPER_MAX_SPEED   200  // steps/s
-#define STEPPER_ACCEL       100  // steps/s^2
+#define STEPPER_MAX_SPEED   30  // steps/s
+#define STEPPER_ACCEL       20  // steps/s^2
 
 /**
  * moveArm()
@@ -146,10 +146,11 @@ void moveWrist(uint8_t* data) {
   int servoIdx = data[0];
   int angle = data[1];
 
-  if (servo_idx == 4) {
-    int angle_offset = SERVO_LEFT_WRIST_ZERO;
-  } else if (servo_idx == 9) {
-    int angle_offset = SERVO_RIGHT_WRIST_ZERO;
+  int angle_offset; 
+  if (servoIdx == 4) {
+    angle_offset = SERVO_LEFT_WRIST_ZERO;
+  } else if (servoIdx == 9) {
+    angle_offset = SERVO_RIGHT_WRIST_ZERO;
   }
 
   // Map the angle to the servo pulse width (in PCA9685 counts)
