@@ -95,7 +95,7 @@ def get_position_from_index(string_name, idx):
 
 def get_mask_orange(image):
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    lower_bound = np.array([0, 50, 130])
+    lower_bound = np.array([0, 170, 100])
     upper_bound = np.array([25, 255, 255])
     return cv2.inRange(image_hsv, lower_bound, upper_bound)
 
@@ -188,7 +188,7 @@ def main(stop_event):
                 string_state.corners = get_corner_points(image)
                 print("Corner points selected:", string_state.corners)
                 # Create the quad mask once we have the corners
-                quad_mask = create_quad_mask(image.shape, string_state.corners)
+                quad_mask = create_quad_mask(depth.shape, string_state.corners)
             else:
                 print("Corners already selected")
                 break
