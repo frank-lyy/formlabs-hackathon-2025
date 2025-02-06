@@ -218,11 +218,11 @@ def main(stop_event):
             prev_time = time.time()
             cleaned_blue = clean_data(mask_blue, points, quad_mask, visualize=False)
             cleaned_orange = clean_data(mask_orange, points, quad_mask, visualize=False)
-            string_state.orange_data["source_points"] = get_initial_pointcloud_order(cleaned_orange, visualize=False)
-            string_state.blue_data["source_points"] = get_initial_pointcloud_order(cleaned_blue, visualize=False)
+            string_state.orange_data["source_points"] = get_initial_pointcloud_order(cleaned_orange, visualize=True)
+            string_state.blue_data["source_points"] = get_initial_pointcloud_order(cleaned_blue, visualize=True)
 
         # Quit
-        if cv2.waitKey(1) == ord("\n"):
+        if cv2.waitKey(1) == ord("n"):
             print("Initial states set. Begin Tracking.")
             break
 
