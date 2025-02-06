@@ -119,7 +119,7 @@ def pc_registration(pointcloud_1, pointcloud_2, visualize=False):
     
     return TY
 
-def resample_points_with_bspline(points, s=0.1, k=3, min_points=50):
+def resample_points_with_bspline(points, s=0.1, k=3, min_points=30):
     """
     Fit a B-spline to the points and resample to get at least min_points points.
     Maintains the ordering of points along the spline.
@@ -134,9 +134,9 @@ def resample_points_with_bspline(points, s=0.1, k=3, min_points=50):
 
     # Calculate number of points needed
     n_points = max(2 * min_points, len(points))
-    spline_points = splev(np.linspace(0, 1, n_points), tck)
+    x_new, y_new, z_new = splev(np.linspace(0, 1, n_points), tck)
     
-    return spline_points
+    return np.column_stack([x_new, y_new, z_new])
 
 def track_state(source_pointcloud, target_pointcloud, visualize=False):
     TY = pc_registration(source_pointcloud, target_pointcloud, visualize=visualize)
