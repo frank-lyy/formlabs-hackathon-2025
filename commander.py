@@ -30,13 +30,18 @@ class Commander:
         angleB = list(abs(angleB).to_bytes(1, "big"))
         self.send_command(ser_idx, 0x00, signA + angleA + signB + angleB, debug)
 
-    def move_endo_wrist(self, ser_idx, wrist_idx, potA, potB, potC, potD, debug=True):
+    def move_endo_wrist(self, ser_idx, wrist_idx, angleA, angleB, theta, phi, debug=True):
+        angleA = max(-180, min(180, angleA)) + 180
+        angleB = max(-180, min(180, angleB)) + 180
+        theta = max(-180, min(180, theta)) + 180
+        phi = max(-180, min(180, phi)) + 180
+
         wrist_idx = list(wrist_idx.to_bytes(1, "big"))
-        potA = list(potA.to_bytes(2, "big"))
-        potB = list(potB.to_bytes(2, "big"))
-        potC = list(potC.to_bytes(2, "big"))
-        potD = list(potD.to_bytes(2, "big"))
-        self.send_command(ser_idx, 0x01, wrist_idx + potA + potB + potC + potD, debug)
+        angleA = list(angleA.to_bytes(2, "big"))
+        angleB = list(angleB.to_bytes(2, "big"))
+        theta = list(theta.to_bytes(2, "big"))
+        phi = list(phi.to_bytes(2, "big"))
+        self.send_command(ser_idx, 0x01, wrist_idx + angleA + angleB + theta + phi, debug)
 
     def move_wrist(self, ser_idx, servo_idx, angle, debug=True):
         servo_idx = list(servo_idx.to_bytes(1, "big"))

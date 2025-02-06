@@ -5,6 +5,9 @@ Adafruit_PWMServoDriver servoDriver = Adafruit_PWMServoDriver(0x40);
 AccelStepper stepperA(AccelStepper::DRIVER, 2, 5);
 AccelStepper stepperB(AccelStepper::DRIVER, 3, 6);
 
+// Number of times of wrist movement
+#define NUM_CYCLES 12
+
 // Constants defining command and action lengths
 #define CMD_LEN 11      // The total number of bytes in each full command
 #define ACTION_LEN 3    // Number of possible actions (moveArm, moveEndoWrist, moveWrist)
@@ -13,11 +16,8 @@ AccelStepper stepperB(AccelStepper::DRIVER, 3, 6);
 #define SERVO_FREQ 60           // Servo PWM frequency (usually 50-60Hz)
 #define SERVO_MIN 125           // Minimum pulse length count for typical servo range
 #define SERVO_MAX 625           // Maximum pulse length count for typical servo range
-#define ENDO_WRIST_MIN 650      // Minimum pulse for the endo-wrist mechanism (in microseconds)
-#define ENDO_WRIST_MAX 2350     // Maximum pulse for the endo-wrist mechanism (in microseconds)
 
 // Servo channel IDs on the PCA9685 driver board
-// SERVO WIRING DIAGRAM
 #define SERVO_A_A_ID 0
 #define SERVO_A_B_ID 1
 #define SERVO_A_C_ID 2
@@ -89,88 +89,39 @@ void moveArm(uint8_t* data) {
 /**
  * moveEndoWrist()
  * ----------------
- * This function receives 9 bytes in `data`:
- *   data[0]  -> armIdx (which arm: 0 for arm A, 1 for arm B)
- *   data[1]  -> high byte of potA
- *   data[2]  -> low byte of potA
- *   data[3]  -> high byte of potB
- *   data[4]  -> low byte of potB
- *   data[5]  -> high byte of potC
- *   data[6]  -> low byte of potC
- *   data[7]  -> high byte of potD
- *   data[8]  -> low byte of potD
- *
- * Each potX is a 10-bit reading (0-1023) that corresponds to a desired
- * position for the endo-wrist servos:
- *   potA -> abduction servo
- *   potB, potC -> used to compute flexion for two servos plus a jaw mechanism
- *   potD -> shaft rotation servo
+ * 
+ * The input data are values from 0 to 360
  *
  * The code then maps these pot values to the correct servo pulse widths (in microseconds),
  * and further translates them into the correct PCA9685 driver counts (0-4095).
- * Finally, it sets the servos on either arm A or arm B, depending on armIdx,
+ * Finally, it sets the servos on either arm A or arm B, depending on wristIdx,
  * and sends back a 2-byte response (0xFF, 0x01).
  */
 void moveEndoWrist(uint8_t* data) {
-  int armIdx = data[0];
-  int potA = (data[1] << 8) + data[2];
-  int potB = (data[3] << 8) + data[4];
-  int potC = (data[5] << 8) + data[6];
-  int potD = (data[7] << 8) + data[8];
+  int wristIdx = data[0];
+  int angleA = (data[1] << 8) + data[2];
+  int angleB = (data[3] << 8) + data[4];
+  int theta = (data[5] << 8) + data[6];
+  const float PHI_COEFF = 0.66667;
+  int phi = (data[7] << 8) + data[8];
 
-  // Variables to store converted pulse widths
-  int pWideA, pWideB, pWideC, pWideD;     // Pulse_Wide  
-  int pWidthA, pWidthB, pWidthC, pWidthD; // Pulse_Width
-     
-  int halfFlexion, remappedPotC;
-  int F1, F2; // Flexion Variables
-  
-  // A -> ABDUCTION
-  // Map potA from [0..1023] into endo-wrist microseconds [ENDO_WRIST_MIN..ENDO_WRIST_MAX],
-  // then convert that into the PCA9685 counts [0..4095].
-  pWideA = map(potA, 0, 1023, ENDO_WRIST_MIN, ENDO_WRIST_MAX);
-  pWidthA = int(float(pWideA) / 1000000 * SERVO_FREQ * 4096);
+  int pulseA = angleA + PHI_COEFF * (float)(phi - 180);
+  pulseA = map(constrain(pulseA, 100, 260), 100, 260, SERVO_MIN, SERVO_MAX);
+  int pulseB = angleB + PHI_COEFF * (float)(phi - 180);
+  pulseB = map(constrain(pulseB, 100, 260), 100, 260, SERVO_MIN, SERVO_MAX);
+  int pulseTheta = map(theta, 18, 342, SERVO_MIN, SERVO_MAX);
+  int pulsePhi = map(constrain(phi, 90, 270), 90, 270, SERVO_MIN, SERVO_MAX);
 
-  // JAWS
-  // If potC > 511, that means "open jaw," so we remap part of its range.
-  // Otherwise, we default to closed or no movement.
-  if (potC > 511) { // jaw open
-    remappedPotC = constrain(potC, 511, 750);
-    remappedPotC = map(remappedPotC, 511, 750, 0, 170);
-    halfFlexion = (remappedPotC / 2); }
-  else { // jaw closed
-    remappedPotC = 0;
-    halfFlexion = 0;
-  }
-
-  // F1 B -> FLEXION_1
-  F1 = potB + ((potA-511)/2) + remappedPotC; // Jaw and abduction compensation
-  F1 = constrain(F1, 0, 1023);
-  pWideB = map(F1, 0, 1023, ENDO_WRIST_MIN, ENDO_WRIST_MAX);
-  pWidthB = int(float(pWideB) / 1000000 * SERVO_FREQ * 4096);
-  
-  // F2 C -> FLEXION_2
-  F2 = potB + ((potA-511)/2) - remappedPotC; // Jaw and abduction compensation
-  F2 = constrain(F2, 0, 1023);
-  pWideC = map(F2, 0, 1023, ENDO_WRIST_MIN, ENDO_WRIST_MAX);
-  pWidthC = int(float(pWideC) / 1000000 * SERVO_FREQ * 4096);  
-
-  // D -> SHAFT ROTATION
-  pWideD = map(potD, 0, 1023, ENDO_WRIST_MIN, ENDO_WRIST_MAX);
-  pWidthD = int(float(pWideD) / 1000000 * SERVO_FREQ * 4096);
-
-  // Write the computed PWM values to the correct set of servo channels,
-  // depending on which arm (A or B) we're controlling.
-  if (armIdx == 0) {
-    servoDriver.setPWM(SERVO_A_A_ID, 0, pWidthA);
-    servoDriver.setPWM(SERVO_A_B_ID, 0, pWidthB);
-    servoDriver.setPWM(SERVO_A_C_ID, 0, pWidthC);
-    servoDriver.setPWM(SERVO_A_D_ID, 0, pWidthD);
+  if (wristIdx == 0) {
+    servoDriver.setPWM(SERVO_A_A_ID, 0, pulseTheta); 
+    servoDriver.setPWM(SERVO_A_B_ID, 0, pulseB); 
+    servoDriver.setPWM(SERVO_A_C_ID, 0, pulseA); 
+    servoDriver.setPWM(SERVO_A_D_ID, 0, pulsePhi);
   } else {
-    servoDriver.setPWM(SERVO_B_A_ID, 0, pWidthA);
-    servoDriver.setPWM(SERVO_B_B_ID, 0, pWidthB);
-    servoDriver.setPWM(SERVO_B_C_ID, 0, pWidthC);
-    servoDriver.setPWM(SERVO_B_D_ID, 0, pWidthD);
+    servoDriver.setPWM(SERVO_B_A_ID, 0, pulseTheta); 
+    servoDriver.setPWM(SERVO_B_B_ID, 0, pulseB); 
+    servoDriver.setPWM(SERVO_B_C_ID, 0, pulseA); 
+    servoDriver.setPWM(SERVO_B_D_ID, 0, pulsePhi);
   }
 
   // Pause to allow servos to move
@@ -222,7 +173,6 @@ void (*actions[])(uint8_t*) = {
 
 // Helper function to move all endowrist servos back and forth to fully seat the couplers
 void engage_couplers() {
-  int NUM_CYCLES = 12;  // Reduce cycles for smoother motion
   int CYCLE_MIN = 60;
   int CYCLE_MAX = 120;
   int STEP_DELAY = 50;  // Delay between steps for slower motion
@@ -261,13 +211,12 @@ void engage_couplers() {
 
 void setup() {
   Serial.begin(9600);
-
   // Servo motor setup
   servoDriver.begin();
   servoDriver.setPWMFreq(SERVO_FREQ);
 
-  engage_couplers();
- 
+  //engage_couplers();
+
   // Set enable pins for steppers
   pinMode(EN_PIN, OUTPUT);
   digitalWrite(EN_PIN, LOW); 
@@ -287,19 +236,6 @@ void setup() {
 uint8_t inBytes[CMD_LEN];  // Buffer for incoming command bytes
 int numBytes = 0;  // counter for number of bytes received
 void loop() {
-  int pulse = map(90, 0, 180, SERVO_MIN, SERVO_MAX);
-  servoDriver.setPWM(SERVO_A_A_ID, 0, pulse);
-  servoDriver.setPWM(SERVO_A_B_ID, 0, pulse);
-  servoDriver.setPWM(SERVO_A_C_ID, 0, pulse);
-  servoDriver.setPWM(SERVO_A_D_ID, 0, pulse);
-  servoDriver.setPWM(SERVO_B_A_ID, 0, pulse);
-  servoDriver.setPWM(SERVO_B_B_ID, 0, pulse);
-  servoDriver.setPWM(SERVO_B_C_ID, 0, pulse);
-  servoDriver.setPWM(SERVO_B_D_ID, 0, pulse);
-  delay(1000);
-
-  Serial.println("looping...");
-  delay(500);
   if (Serial.available() > 0) {
     // Shift the existing buffer contents over by 1
     // (This effectively keeps the newest byte in inBytes[CMD_LEN - 1])
