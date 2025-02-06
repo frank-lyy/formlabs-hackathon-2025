@@ -65,6 +65,24 @@ def visualize_cpd(iteration, error, X, Y, ax):
     plt.cla()
     ax.scatter(X[:, 0],  X[:, 1], X[:, 2], color='red', label='Target')
     ax.scatter(Y[:, 0],  Y[:, 1], Y[:, 2], color='blue', label='Transformed Source')
+
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+    # Ensure all axes have the same scale
+    min_vals = np.min(X, axis=0)
+    max_vals = np.max(X, axis=0)
+    max_range = np.max(max_vals - min_vals) / 2.0
+
+    mid_x = (max_vals[0] + min_vals[0]) / 2.0
+    mid_y = (max_vals[1] + min_vals[1]) / 2.0
+    mid_z = (max_vals[2] + min_vals[2]) / 2.0
+
+    ax.set_xlim(mid_x - max_range, mid_x + max_range)
+    ax.set_ylim(mid_y - max_range, mid_y + max_range)
+    ax.set_zlim(mid_z - max_range, mid_z + max_range)
+
     ax.text2D(0.87, 0.92, 'Iteration: {:d}'.format(
         iteration), horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, fontsize='x-large')
     ax.legend(loc='upper left', fontsize='x-large')
@@ -132,11 +150,6 @@ def track_state(source_pointcloud, target_pointcloud, visualize=False):
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         ax.scatter(ordered_target_pointcloud[:, 0], ordered_target_pointcloud[:, 1], ordered_target_pointcloud[:, 2], c=colors)
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        ax.set_zlabel('Z')
-
-        # Set axis labels
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
