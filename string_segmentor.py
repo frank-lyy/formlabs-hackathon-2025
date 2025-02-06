@@ -221,6 +221,7 @@ def main(stop_event):
             cleaned_blue_image = image.copy()
             cleaned_blue_image[~improved_mask_blue] = 0
             side_by_side = cv2.hconcat([cleaned_orange_image, cleaned_blue_image])
+            cv2.resizeWindow("Orange | Blue", 1280, 720)
             cv2.imshow("Orange | Blue", side_by_side)
 
             string_state.orange_data["source_points"] = get_initial_pointcloud_order(cleaned_orange, visualize=True)
@@ -247,12 +248,18 @@ def main(stop_event):
             cleaned_blue = clean_data(mask_blue, points, quad_mask, visualize=False)
             cleaned_orange = clean_data(mask_orange, points, quad_mask, visualize=False)
 
-            # # Show frames side by side
-            # side_by_side = cv2.hconcat([image_orange, image_blue])
-            # cv2.imshow("Orange | Blue", side_by_side)
+            improved_mask_orange = improve_mask(mask_orange, quad_mask, visualize=False)
+            improved_mask_blue = improve_mask(mask_blue, quad_mask, visualize=False)
+            cleaned_orange_image = image.copy()
+            cleaned_orange_image[~improved_mask_orange] = 0
+            cleaned_blue_image = image.copy()
+            cleaned_blue_image[~improved_mask_blue] = 0
+            side_by_side = cv2.hconcat([cleaned_orange_image, cleaned_blue_image])
+            cv2.resizeWindow("Orange | Blue", 1280, 720)
+            cv2.imshow("Orange | Blue", side_by_side)
 
             new_orange_target_points = get_state(string_state.orange_data["source_points"], cleaned_orange, visualize=True)
-            new_blue_target_points = get_state(string_state.blue_data["source_points"], cleaned_blue, visualize=True)
+            new_blue_target_points = get_state(string_state.blue_data["source_points"], cleaned_blue, visualize=False)
             string_state.set_orange_data(new_orange_target_points)
             string_state.set_blue_data(new_blue_target_points)
             string_state.orange_data["source_points"] = new_orange_target_points
