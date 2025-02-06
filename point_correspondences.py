@@ -137,14 +137,19 @@ def resample_points_with_bspline(points, s=0.1, k=5, min_points=30):
 def track_state(source_pointcloud, target_pointcloud, visualize=False):
     TY = pc_registration(source_pointcloud, target_pointcloud, visualize=visualize)
 
-    nn = NearestNeighbors(n_neighbors=1, algorithm='kd_tree')
+    nn = NearestNeighbors(n_neighbors=5, algorithm='kd_tree')
     nn.fit(target_pointcloud)
 
     distances, indices = nn.kneighbors(TY)
 
     # Create a mapping of each unique target index to all the TY points that map to it
     source_to_target = {}
+    seen_indices = set()
     for source_idx, (target_idx, dist) in enumerate(zip(indices.flatten(), distances.flatten())):
+        if target_idx in seen_indices:
+            continue
+        else:
+            seen_indices.add(target_idx)
         if source_idx not in source_to_target:
             source_to_target[source_idx] = set([target_idx])
         else:
