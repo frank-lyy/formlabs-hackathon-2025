@@ -38,9 +38,25 @@ def initial_pointcloud_order(pointcloud, visualize=False):
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         ax.scatter(normed_pointcloud[:, 0], normed_pointcloud[:, 1], normed_pointcloud[:, 2], c=colors)
+
+        # Set axis labels
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
+
+        # Ensure all axes have the same scale
+        min_vals = np.min(pointcloud, axis=0)
+        max_vals = np.max(pointcloud, axis=0)
+        max_range = np.max(max_vals - min_vals) / 2.0
+
+        mid_x = (max_vals[0] + min_vals[0]) / 2.0
+        mid_y = (max_vals[1] + min_vals[1]) / 2.0
+        mid_z = (max_vals[2] + min_vals[2]) / 2.0
+
+        ax.set_xlim(mid_x - max_range, mid_x + max_range)
+        ax.set_ylim(mid_y - max_range, mid_y + max_range)
+        ax.set_zlim(mid_z - max_range, mid_z + max_range)
+
         plt.show()
 
     return ordered_pointcloud

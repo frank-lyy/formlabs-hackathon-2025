@@ -205,8 +205,8 @@ def main(stop_event):
         # Get masked image
         mask_orange = get_mask_orange(image)
         mask_blue = get_mask_blue(image)
-        image_orange = get_masked_image(image, mask_orange)
-        image_blue = get_masked_image(image, mask_blue)
+        # image_orange = get_masked_image(image, mask_orange)
+        # image_blue = get_masked_image(image, mask_blue)
 
         # Store data
         if time.time() - prev_time > 5 and record_data:
@@ -219,19 +219,19 @@ def main(stop_event):
             # Copy original pixels
             for point in cleaned_orange:
                 x, y = point.astype(int)
-                if 0 <= y < image_orange.shape[0] and 0 <= x < image_orange.shape[1]:
+                if 0 <= y < image.shape[0] and 0 <= x < image.shape[1]:
                     cleaned_orange_image[y, x] = image[y, x]
                 
             for point in cleaned_blue:
                 x, y = point.astype(int)
-                if 0 <= y < image_blue.shape[0] and 0 <= x < image_blue.shape[1]:
+                if 0 <= y < image.shape[0] and 0 <= x < image.shape[1]:
                     cleaned_blue_image[y, x] = image[y, x]
 
             side_by_side = cv2.hconcat([cleaned_orange_image, cleaned_blue_image])
             cv2.imshow("Orange | Blue", side_by_side)
 
-            string_state.orange_data["source_points"] = get_initial_pointcloud_order(cleaned_orange, visualize=False)
-            string_state.blue_data["source_points"] = get_initial_pointcloud_order(cleaned_blue, visualize=False)
+            string_state.orange_data["source_points"] = get_initial_pointcloud_order(cleaned_orange, visualize=True)
+            string_state.blue_data["source_points"] = get_initial_pointcloud_order(cleaned_blue, visualize=True)
 
         # Quit
         if cv2.waitKey(1) == ord("n"):
@@ -251,8 +251,8 @@ def main(stop_event):
         # Store data
         if time.time() - prev_time > 1 / FPS and record_data:
             prev_time = time.time()
-            cleaned_blue = clean_data(mask_blue, points, quad_mask, visualize=True)
-            cleaned_orange = clean_data(mask_orange, points, quad_mask, visualize=True)
+            cleaned_blue = clean_data(mask_blue, points, quad_mask, visualize=False)
+            cleaned_orange = clean_data(mask_orange, points, quad_mask, visualize=False)
 
             # # Show frames side by side
             # side_by_side = cv2.hconcat([image_orange, image_blue])
