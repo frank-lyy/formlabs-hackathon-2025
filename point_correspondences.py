@@ -119,38 +119,24 @@ def pc_registration(pointcloud_1, pointcloud_2, visualize=False):
     
     return TY
 
-def resample_points_with_bspline(points, min_points=50):
+def resample_points_with_bspline(points, s=0.1, k=3, min_points=50):
     """
     Fit a B-spline to the points and resample to get at least min_points points.
     Maintains the ordering of points along the spline.
     """
-    if len(points) < 10 or len(points) > min_points: 
+    if len(points) > min_points: 
+        print("no resampling needed!")
         return points
     
     print("resampling!")
-    # Parameter space for original points (cumulative chord length)
-    t = np.zeros(len(points))
-    for i in range(1, len(points)):
-        t[i] = t[i-1] + np.linalg.norm(points[i] - points[i-1])
-    t = t / t[-1]  # Normalize to [0, 1]
-    
-    # Fit B-spline for each dimension
-    k = 9
-    bsplines = []
-    for dim in range(points.shape[1]):
-        spl = make_interp_spline(t, points[:, dim], k=k)
-        bsplines.append(spl)
-    
+    x, y, z = points[:, 0], points[:, 1], points[:, 2]
+    tck, u = splprep([x, y, z], s=s, k=k)
+
     # Calculate number of points needed
     n_points = max(2 * min_points, len(points))
+    spline_points = splev(np.linspace(0, 1, n_points), tck)
     
-    # Sample points
-    t_new = np.linspace(0, 1, n_points)
-    resampled_points = np.zeros((n_points, points.shape[1]))
-    for dim in range(points.shape[1]):
-        resampled_points[:, dim] = bsplines[dim](t_new)
-    
-    return resampled_points
+    return spline_points
 
 def track_state(source_pointcloud, target_pointcloud, visualize=False):
     TY = pc_registration(source_pointcloud, target_pointcloud, visualize=visualize)
