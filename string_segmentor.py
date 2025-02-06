@@ -214,18 +214,12 @@ def main(stop_event):
             cleaned_blue = clean_data(mask_blue, points, quad_mask, visualize=False)
             cleaned_orange = clean_data(mask_orange, points, quad_mask, visualize=False)
             
-            cleaned_orange_image = np.zeros_like(image)
-            cleaned_blue_image = np.zeros_like(image)
-            # Copy original pixels
-            for idx in range(cleaned_orange.shape[0]):
-                x, y = cleaned_orange[idx][0], cleaned_orange[idx][1]
-                print(x)
-                cleaned_orange_image[y, x] = image[y, x]
-                
-            for idx in range(cleaned_blue.shape[0]):
-                x, y = cleaned_blue[idx][0], cleaned_blue[idx][1]
-                cleaned_blue_image[y, x] = image[y, x]
-
+            improved_mask_orange = improve_mask(mask_orange, quad_mask, visualize=False)
+            improved_mask_blue = improve_mask(mask_blue, quad_mask, visualize=False)
+            cleaned_orange_image = image.copy()
+            cleaned_orange_image[~improved_mask_orange] = 0
+            cleaned_blue_image = image.copy()
+            cleaned_blue_image[~improved_mask_blue] = 0
             side_by_side = cv2.hconcat([cleaned_orange_image, cleaned_blue_image])
             cv2.imshow("Orange | Blue", side_by_side)
 
