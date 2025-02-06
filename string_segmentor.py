@@ -95,7 +95,7 @@ def get_position_from_index(string_name, idx):
 
 def get_mask_orange(image):
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    lower_bound = np.array([0, 50, 130])
+    lower_bound = np.array([0, 170, 100])
     upper_bound = np.array([25, 255, 255])
     return cv2.inRange(image_hsv, lower_bound, upper_bound)
 
@@ -188,7 +188,7 @@ def main(stop_event):
                 string_state.corners = get_corner_points(image)
                 print("Corner points selected:", string_state.corners)
                 # Create the quad mask once we have the corners
-                quad_mask = create_quad_mask(image.shape, string_state.corners)
+                quad_mask = create_quad_mask(depth.shape, string_state.corners)
             else:
                 print("Corners already selected")
                 break
@@ -205,24 +205,24 @@ def main(stop_event):
         # Get masked image
         mask_orange = get_mask_orange(image)
         mask_blue = get_mask_blue(image)
-        image_orange = get_masked_image(image, mask_orange)
-        image_blue = get_masked_image(image, mask_blue)
-
-        # Show frame
-        cv2.imshow("image", image)
-        cv2.imshow("orange", image_orange)
-        cv2.imshow("blue", image_blue)
+        # image_orange = get_masked_image(image, mask_orange)
+        # image_blue = get_masked_image(image, mask_blue)
 
         # Store data
         if time.time() - prev_time > 5 and record_data:
             prev_time = time.time()
             cleaned_blue = clean_data(mask_blue, points, quad_mask, visualize=False)
             cleaned_orange = clean_data(mask_orange, points, quad_mask, visualize=False)
+            
+            # Show frames side by side
+            side_by_side = cv2.hconcat([cleaned_orange, cleaned_blue])
+            cv2.imshow("Orange | Blue", side_by_side)
+
             string_state.orange_data["source_points"] = get_initial_pointcloud_order(cleaned_orange, visualize=False)
             string_state.blue_data["source_points"] = get_initial_pointcloud_order(cleaned_blue, visualize=False)
 
         # Quit
-        if cv2.waitKey(1) == ord("\n"):
+        if cv2.waitKey(1) == ord("n"):
             print("Initial states set. Begin Tracking.")
             break
 
@@ -233,19 +233,19 @@ def main(stop_event):
         # Get masked image
         mask_orange = get_mask_orange(image)
         mask_blue = get_mask_blue(image)
-        image_orange = get_masked_image(image, mask_orange)
-        image_blue = get_masked_image(image, mask_blue)
-
-        # Show frame
-        cv2.imshow("image", image)
-        cv2.imshow("orange", image_orange)
-        cv2.imshow("blue", image_blue)
+        # image_orange = get_masked_image(image, mask_orange)
+        # image_blue = get_masked_image(image, mask_blue)
 
         # Store data
         if time.time() - prev_time > 1 / FPS and record_data:
             prev_time = time.time()
             cleaned_blue = clean_data(mask_blue, points, quad_mask, visualize=True)
             cleaned_orange = clean_data(mask_orange, points, quad_mask, visualize=True)
+
+            # Show frames side by side
+            side_by_side = cv2.hconcat([cleaned_orange, cleaned_blue])
+            cv2.imshow("Orange | Blue", side_by_side)
+
             new_orange_target_points = get_state(string_state.orange_data["source_points"], cleaned_orange, visualize=True)
             new_blue_target_points = get_state(string_state.blue_data["source_points"], cleaned_blue, visualize=True)
             string_state.set_orange_data(new_orange_target_points)
