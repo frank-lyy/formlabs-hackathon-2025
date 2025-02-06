@@ -214,12 +214,12 @@ def main(stop_event):
         cv2.imshow("blue", image_blue)
 
         # Store data
-        if time.time() - prev_time > 3 and record_data:
+        if time.time() - prev_time > 5 and record_data:
             prev_time = time.time()
-            cleaned_blue = clean_data(mask_blue, points, quad_mask, visualize=True)
-            cleaned_orange = clean_data(mask_orange, points, quad_mask, visualize=True)
-            string_state.orange_data["source_points"] = get_initial_pointcloud_order(cleaned_orange, visualize=True)
-            string_state.blue_data["source_points"] = get_initial_pointcloud_order(cleaned_blue, visualize=True)
+            cleaned_blue = clean_data(mask_blue, points, quad_mask, visualize=False)
+            cleaned_orange = clean_data(mask_orange, points, quad_mask, visualize=False)
+            string_state.orange_data["source_points"] = get_initial_pointcloud_order(cleaned_orange, visualize=False)
+            string_state.blue_data["source_points"] = get_initial_pointcloud_order(cleaned_blue, visualize=False)
 
         # Quit
         if cv2.waitKey(1) == ord("\n"):
