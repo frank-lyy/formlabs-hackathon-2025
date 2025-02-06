@@ -7,7 +7,7 @@ from pycpd import DeformableRegistration
 import matplotlib.pyplot as plt
 from functools import partial
 from sklearn.neighbors import NearestNeighbors
-from scipy.interpolate import BSpline, make_interp_spline
+from scipy.interpolate import splprep, splev
 
 def get_pointcloud_from_image(filename, width, height, remove_sides=False):
     depth_image = get_depth(filename+"_Depth.raw", width, height)
@@ -119,7 +119,7 @@ def pc_registration(pointcloud_1, pointcloud_2, visualize=False):
     
     return TY
 
-def resample_points_with_bspline(points, min_points=100):
+def resample_points_with_bspline(points, min_points=50):
     """
     Fit a B-spline to the points and resample to get at least min_points points.
     Maintains the ordering of points along the spline.

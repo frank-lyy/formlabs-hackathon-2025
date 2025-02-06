@@ -231,6 +231,7 @@ def main(stop_event):
         # Quit
         if cv2.waitKey(1) == ord("n"):
             print("Initial states set. Begin Tracking.")
+            print("There are {} orange points and {} blue points".format(len(string_state.orange_data["source_points"]), len(string_state.blue_data["source_points"])))
             break
 
     while not stop_event.is_set():
