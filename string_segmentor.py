@@ -205,8 +205,8 @@ def main(stop_event):
         # Get masked image
         mask_orange = get_mask_orange(image)
         mask_blue = get_mask_blue(image)
-        image_orange = get_masked_image(image, mask_orange)
-        image_blue = get_masked_image(image, mask_blue)
+        # image_orange = get_masked_image(image, mask_orange)
+        # image_blue = get_masked_image(image, mask_blue)
 
         # Store data
         if time.time() - prev_time > 5 and record_data:
@@ -233,14 +233,19 @@ def main(stop_event):
         # Get masked image
         mask_orange = get_mask_orange(image)
         mask_blue = get_mask_blue(image)
-        image_orange = get_masked_image(image, mask_orange)
-        image_blue = get_masked_image(image, mask_blue)
+        # image_orange = get_masked_image(image, mask_orange)
+        # image_blue = get_masked_image(image, mask_blue)
 
         # Store data
         if time.time() - prev_time > 1 / FPS and record_data:
             prev_time = time.time()
             cleaned_blue = clean_data(mask_blue, points, quad_mask, visualize=True)
             cleaned_orange = clean_data(mask_orange, points, quad_mask, visualize=True)
+
+            # Show frames side by side
+            side_by_side = cv2.hconcat([cleaned_orange, cleaned_blue])
+            cv2.imshow("Orange | Blue", side_by_side)
+
             new_orange_target_points = get_state(string_state.orange_data["source_points"], cleaned_orange, visualize=True)
             new_blue_target_points = get_state(string_state.blue_data["source_points"], cleaned_blue, visualize=True)
             string_state.set_orange_data(new_orange_target_points)
