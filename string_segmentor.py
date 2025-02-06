@@ -6,39 +6,91 @@ from planner import *
 import cv2
 import numpy as np
 import time
+import threading
 
 FPS = 2
 record_data = True
 
 # Store data
-orange_data = {}
-blue_data = {}
-corners = None
+class StringState:
+    def __init__(self):
+        self.orange_data = {}
+        self.blue_data = {}
+        self.corners = None
+        self.orange_lock = threading.Lock()
+        self.blue_lock = threading.Lock()
+    
+    def set_orange_data(self, new_data):
+        with self.orange_lock:
+            self.orange_data["target_points"] = new_data
+    
+    def set_blue_data(self, new_data):
+        with self.blue_lock:
+            self.blue_data["target_points"] = new_data
+    
+    def get_orange_data(self):
+        with self.orange_lock:
+            return self.orange_data["target_points"]
+    
+    def get_blue_data(self):
+        with self.blue_lock:
+            return self.blue_data["target_points"]
+
+string_state = StringState()
 
 def get_feature_index(string_name, reference_pc):
     """
     string_name is either "left" or "right"
     Return the best fit index of the feature described by reference_pc
     """
-    target_pc = orange_data["target_points"] if string_name == "left" else blue_data["target_points"]
-    best_index = segment_shoelace(target_pc, reference_pc)
+    target_pc = string_state.get_orange_data() if string_name == "left" else string_state.get_blue_data()
+    best_index = match_template(target_pc, reference_pc, window_size=5)
     return best_index
+    # return 4
     
 def get_position_index(string_name, pos):
     """
     string_name is either "left" or "right"
     Return the index of the position pos (0 <= pos < 1)
     """
-    target_pc = orange_data["target_points"] if string_name == "left" else blue_data["target_points"]
+    target_pc = string_state.get_orange_data() if string_name == "left" else string_state.get_blue_data()
     return int(pos * len(target_pc))
+    # if pos == 0:
+    #     return 0
+    # elif pos == 0.5:
+    #     return 5
+    # elif pos == 0.6:
+    #     return 6
+    # elif pos == 0.95:
+    #     return 9
     
 def get_position_from_index(string_name, idx):
     """
     string_name is either "left" or "right"
     Return the (x, y, z) position of the index idx (0 <= idx < len(string_name))
     """
-    target_pc = orange_data["target_points"] if string_name == "left" else blue_data["target_points"]
+    target_pc = string_state.get_orange_data() if string_name == "left" else string_state.get_blue_data()
     return target_pc[idx]
+    # if string_name == "left":
+    #     if idx == 0:
+    #         return np.array([0, 0.05, 0.35])
+    #     elif idx == 5:
+    #         return np.array([0, -0.05, 0.4])
+    #     elif idx == 6:
+    #         return np.array([0, -0.06, 0.41])
+    #     elif idx == 9:
+    #         return np.array([0, -0.1, 0.45])
+    # else:
+    #     if idx == 0:
+    #         return np.array([0.12, 0.05, 0.35])
+    #     elif idx == 5:
+    #         return np.array([0.12, -0.05, 0.4])
+    #     elif idx == 6:
+    #         return np.array([0.12, -0.06, 0.41])
+    #     elif idx == 9:
+    #         return np.array([0.12, -0.1, 0.45])
+    #     else:
+    #         return np.array([0.12, -0.03, 0.37])
 
 
 def get_mask_orange(image):
@@ -117,13 +169,13 @@ def get_corner_points(frame):
     
     return np.array(corners)
 
-def main():
+def main(stop_event):
     # Initialize camera
     zed = initialize_camera()
     prev_time = time.time()
 
     # Corner choosing stage
-    while True:
+    while not stop_event.is_set():
         # Get data
         image, depth, points = get_camera_data(zed)
 
@@ -140,12 +192,12 @@ def main():
 
         # Store data
         if time.time() - prev_time > 3 and record_data:
-            if corners is None:
+            if string_state.corners is None:
                 # Pause recording and get corner points
-                corners = get_corner_points(image)
-                print("Corner points selected:", corners)
+                string_state.corners = get_corner_points(image)
+                print("Corner points selected:", string_state.corners)
                 # Create the quad mask once we have the corners
-                quad_mask = create_quad_mask(image.shape, corners)
+                quad_mask = create_quad_mask(image.shape, string_state.corners)
             else:
                 print("Corners already selected")
                 break
@@ -155,7 +207,7 @@ def main():
             break
 
     # initialization stage
-    while True:
+    while not stop_event.is_set():
         # Get data
         image, depth, points = get_camera_data(zed)
 
@@ -175,15 +227,15 @@ def main():
             prev_time = time.time()
             cleaned_blue = clean_data(mask_blue, points, quad_mask, visualize=True)
             cleaned_orange = clean_data(mask_orange, points, quad_mask, visualize=True)
-            orange_data["source_points"] = get_initial_pointcloud_order(cleaned_orange, visualize=True)
-            blue_data["source_points"] = get_initial_pointcloud_order(cleaned_blue, visualize=True)
+            string_state.orange_data["source_points"] = get_initial_pointcloud_order(cleaned_orange, visualize=True)
+            string_state.blue_data["source_points"] = get_initial_pointcloud_order(cleaned_blue, visualize=True)
 
         # Quit
         if cv2.waitKey(1) == ord("\n"):
             print("Initial states set. Begin Tracking.")
             break
 
-    while True:
+    while not stop_event.is_set():
         # Get data
         image, depth, points = get_camera_data(zed)
 
@@ -203,10 +255,12 @@ def main():
             prev_time = time.time()
             cleaned_blue = clean_data(mask_blue, points, quad_mask, visualize=True)
             cleaned_orange = clean_data(mask_orange, points, quad_mask, visualize=True)
-            blue_data["target_points"] = get_state(blue_data["source_points"], cleaned_blue, visualize=True)
-            orange_data["target_points"] = get_state(orange_data["source_points"], cleaned_orange, visualize=True)
-            blue_data["source_points"] = blue_data["target_points"]
-            orange_data["source_points"] = orange_data["target_points"]
+            new_orange_target_points = get_state(string_state.orange_data["source_points"], cleaned_orange, visualize=True)
+            new_blue_target_points = get_state(string_state.blue_data["source_points"], cleaned_blue, visualize=True)
+            string_state.set_orange_data(new_orange_target_points)
+            string_state.set_blue_data(new_blue_target_points)
+            string_state.orange_data["source_points"] = new_orange_target_points
+            string_state.blue_data["source_points"] = new_blue_target_points
 
         # Quit
         if cv2.waitKey(1) == ord("q"):
@@ -216,4 +270,5 @@ def main():
     zed.close()
     
 if __name__ == "__main__":
-    main()
+    stop_event = threading.Event()
+    main(stop_event)
