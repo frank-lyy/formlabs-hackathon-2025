@@ -98,7 +98,6 @@ traj_zero_time = 0
 action_idx = 0
 prev_open_close = (0, 0)  # open
 while True:
-    # X_Goal_L, X_Goal_R, open_close_L, open_close_R = get_next_action()
     X_Goal_L, X_Goal_R, open_close_L, open_close_R = high_level_planner.get_next_action()
     if X_Goal_L is None:
         break
