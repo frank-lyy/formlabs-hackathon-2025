@@ -48,8 +48,8 @@ def match_template(pointcloud, template_points, window_size, error_threshold=flo
     template_curve_points = resample_curve(template_points)
 
     # Sliding window search
-    for i in range(window_size, len(pointcloud) - window_size + 1):
-        window = pointcloud[i-window_size:i+window_size]
+    for i in range(len(pointcloud) - window_size + 1):
+        window = pointcloud[i:i+window_size]
         window, _, _ = normalize_pointcloud(window)
 
         pca = PCA(n_components=2)

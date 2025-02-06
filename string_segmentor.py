@@ -1,4 +1,4 @@
-# from camera import *
+from camera import *
 from data_loader import *
 from point_correspondences import *
 from planner import *
@@ -127,6 +127,7 @@ def get_corner_points(frame):
     def mouse_callback(event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
             corners.append((x, y))
+            print(f"Selected point: ({x}, {y})")
             # Draw the point
             cv2.circle(frame, (x, y), 5, (0, 255, 0), -1)
             # Draw the order number
@@ -167,6 +168,7 @@ def get_corner_points(frame):
             cv2.destroyWindow(window_name)
             return None
     
+    print("Returning from get_corner_points:", corners)
     return np.array(corners)
 
 def main(stop_event):
