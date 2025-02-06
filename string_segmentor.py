@@ -95,14 +95,14 @@ def get_position_from_index(string_name, idx):
 
 def get_mask_orange(image):
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    lower_bound = np.array([0, 170, 100])
-    upper_bound = np.array([25, 255, 255])
+    lower_bound = np.array([15, 160, 150])
+    upper_bound = np.array([30, 255, 255])
     return cv2.inRange(image_hsv, lower_bound, upper_bound)
 
 def get_mask_blue(image):
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    lower_bound = np.array([100, 20, 30])
-    upper_bound = np.array([179, 255, 255])
+    lower_bound = np.array([135, 0, 60])
+    upper_bound = np.array([179, 85, 140])
     return cv2.inRange(image_hsv, lower_bound, upper_bound)
 
 def get_masked_image(image, mask):
@@ -205,25 +205,33 @@ def main(stop_event):
         # Get masked image
         mask_orange = get_mask_orange(image)
         mask_blue = get_mask_blue(image)
-        image_orange = get_masked_image(image, mask_orange)
-        image_blue = get_masked_image(image, mask_blue)
-
-        # Show frame
-        cv2.imshow("image", image)
-        cv2.imshow("orange", image_orange)
-        cv2.imshow("blue", image_blue)
+        # image_orange = get_masked_image(image, mask_orange)
+        # image_blue = get_masked_image(image, mask_blue)
 
         # Store data
         if time.time() - prev_time > 5 and record_data:
             prev_time = time.time()
             cleaned_blue = clean_data(mask_blue, points, quad_mask, visualize=False)
             cleaned_orange = clean_data(mask_orange, points, quad_mask, visualize=False)
+            
+            improved_mask_orange = improve_mask(mask_orange, quad_mask, visualize=False)
+            improved_mask_blue = improve_mask(mask_blue, quad_mask, visualize=False)
+            cleaned_orange_image = image.copy()
+            cleaned_orange_image[~improved_mask_orange] = 0
+            cleaned_blue_image = image.copy()
+            cleaned_blue_image[~improved_mask_blue] = 0
+            side_by_side = cv2.hconcat([cleaned_blue_image, cleaned_orange_image])
+            cv2.namedWindow("Blue | Orange", cv2.WINDOW_NORMAL)
+            cv2.resizeWindow("Blue | Orange", 800, 600)
+            cv2.imshow("Blue | Orange", side_by_side)
+
             string_state.orange_data["source_points"] = get_initial_pointcloud_order(cleaned_orange, visualize=True)
             string_state.blue_data["source_points"] = get_initial_pointcloud_order(cleaned_blue, visualize=True)
 
         # Quit
         if cv2.waitKey(1) == ord("n"):
             print("Initial states set. Begin Tracking.")
+            print("There are {} orange points and {} blue points".format(len(string_state.orange_data["source_points"]), len(string_state.blue_data["source_points"])))
             break
 
     while not stop_event.is_set():
@@ -233,21 +241,27 @@ def main(stop_event):
         # Get masked image
         mask_orange = get_mask_orange(image)
         mask_blue = get_mask_blue(image)
-        image_orange = get_masked_image(image, mask_orange)
-        image_blue = get_masked_image(image, mask_blue)
-
-        # Show frame
-        cv2.imshow("image", image)
-        cv2.imshow("orange", image_orange)
-        cv2.imshow("blue", image_blue)
+        # image_orange = get_masked_image(image, mask_orange)
+        # image_blue = get_masked_image(image, mask_blue)
 
         # Store data
         if time.time() - prev_time > 1 / FPS and record_data:
             prev_time = time.time()
-            cleaned_blue = clean_data(mask_blue, points, quad_mask, visualize=True)
-            cleaned_orange = clean_data(mask_orange, points, quad_mask, visualize=True)
+            cleaned_blue = clean_data(mask_blue, points, quad_mask, visualize=False)
+            cleaned_orange = clean_data(mask_orange, points, quad_mask, visualize=False)
+
+            improved_mask_orange = improve_mask(mask_orange, quad_mask, visualize=False)
+            improved_mask_blue = improve_mask(mask_blue, quad_mask, visualize=False)
+            cleaned_orange_image = image.copy()
+            cleaned_orange_image[~improved_mask_orange] = 0
+            cleaned_blue_image = image.copy()
+            cleaned_blue_image[~improved_mask_blue] = 0
+            side_by_side = cv2.hconcat([cleaned_blue_image, cleaned_orange_image])
+            cv2.resizeWindow("Blue | Orange", 800, 600)
+            cv2.imshow("Blue | Orange", side_by_side)
+
             new_orange_target_points = get_state(string_state.orange_data["source_points"], cleaned_orange, visualize=True)
-            new_blue_target_points = get_state(string_state.blue_data["source_points"], cleaned_blue, visualize=True)
+            new_blue_target_points = get_state(string_state.blue_data["source_points"], cleaned_blue, visualize=False)
             string_state.set_orange_data(new_orange_target_points)
             string_state.set_blue_data(new_blue_target_points)
             string_state.orange_data["source_points"] = new_orange_target_points

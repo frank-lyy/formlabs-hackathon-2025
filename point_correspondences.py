@@ -7,6 +7,7 @@ from pycpd import DeformableRegistration
 import matplotlib.pyplot as plt
 from functools import partial
 from sklearn.neighbors import NearestNeighbors
+from scipy.interpolate import splprep, splev
 
 def get_pointcloud_from_image(filename, width, height, remove_sides=False):
     depth_image = get_depth(filename+"_Depth.raw", width, height)
@@ -38,9 +39,25 @@ def initial_pointcloud_order(pointcloud, visualize=False):
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         ax.scatter(normed_pointcloud[:, 0], normed_pointcloud[:, 1], normed_pointcloud[:, 2], c=colors)
+
+        # Set axis labels
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
+
+        # Ensure all axes have the same scale
+        min_vals = np.min(normed_pointcloud, axis=0)
+        max_vals = np.max(normed_pointcloud, axis=0)
+        max_range = np.max(max_vals - min_vals) / 2.0
+
+        mid_x = (max_vals[0] + min_vals[0]) / 2.0
+        mid_y = (max_vals[1] + min_vals[1]) / 2.0
+        mid_z = (max_vals[2] + min_vals[2]) / 2.0
+
+        ax.set_xlim(mid_x - max_range, mid_x + max_range)
+        ax.set_ylim(mid_y - max_range, mid_y + max_range)
+        ax.set_zlim(mid_z - max_range, mid_z + max_range)
+
         plt.show()
 
     return ordered_pointcloud
@@ -49,6 +66,24 @@ def visualize_cpd(iteration, error, X, Y, ax):
     plt.cla()
     ax.scatter(X[:, 0],  X[:, 1], X[:, 2], color='red', label='Target')
     ax.scatter(Y[:, 0],  Y[:, 1], Y[:, 2], color='blue', label='Transformed Source')
+
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+    # Ensure all axes have the same scale
+    min_vals = np.min(X, axis=0)
+    max_vals = np.max(X, axis=0)
+    max_range = np.max(max_vals - min_vals) / 2.0
+
+    mid_x = (max_vals[0] + min_vals[0]) / 2.0
+    mid_y = (max_vals[1] + min_vals[1]) / 2.0
+    mid_z = (max_vals[2] + min_vals[2]) / 2.0
+
+    ax.set_xlim(mid_x - max_range, mid_x + max_range)
+    ax.set_ylim(mid_y - max_range, mid_y + max_range)
+    ax.set_zlim(mid_z - max_range, mid_z + max_range)
+
     ax.text2D(0.87, 0.92, 'Iteration: {:d}'.format(
         iteration), horizontalalignment='center', verticalalignment='center', transform=ax.transAxes, fontsize='x-large')
     ax.legend(loc='upper left', fontsize='x-large')
@@ -84,6 +119,21 @@ def pc_registration(pointcloud_1, pointcloud_2, visualize=False):
     
     return TY
 
+def resample_points_with_bspline(points, s=0.1, k=3, min_points=30):
+    """
+    Fit a B-spline to the points and resample to get at least min_points points.
+    Maintains the ordering of points along the spline.
+    """
+    print("resampling!")
+    x, y, z = points[:, 0], points[:, 1], points[:, 2]
+    tck, u = splprep([x, y, z], s=s, k=k)
+
+    # Calculate number of points needed
+    n_points = max(2 * min_points, len(points))
+    x_new, y_new, z_new = splev(np.linspace(0, 1, n_points), tck)
+    
+    return np.column_stack([x_new, y_new, z_new])
+
 def track_state(source_pointcloud, target_pointcloud, visualize=False):
     TY = pc_registration(source_pointcloud, target_pointcloud, visualize=visualize)
 
@@ -93,23 +143,33 @@ def track_state(source_pointcloud, target_pointcloud, visualize=False):
     distances, indices = nn.kneighbors(TY)
 
     # Create a mapping of each unique target index to all the TY points that map to it
-    target_to_source = {}
+    source_to_target = {}
     for source_idx, (target_idx, dist) in enumerate(zip(indices.flatten(), distances.flatten())):
-        if target_idx not in target_to_source:
-            target_to_source[target_idx] = (source_idx, dist)
-        elif dist < target_to_source[target_idx][1]:
-            target_to_source[target_idx] = (source_idx, dist)
+        if source_idx not in source_to_target:
+            source_to_target[source_idx] = set([target_idx])
+        else:
+            source_to_target[source_idx].add(target_idx)
     
-    # For each target point that has multiple matches, keep only the closest one
-    final_source_indices = []
-    for target_idx, (source_idx, dist) in target_to_source.items():
-        final_source_indices.append((source_idx, target_idx))
+    # Iterate through the source indices and find the target indices that map to each source index
+    # ordering by the minimum distance to the previous picked point
+    ordered_target_indices = []
+    for source_idx, target_indices in source_to_target.items():
+        if ordered_target_indices:
+            previous_point = target_pointcloud[ordered_target_indices[-1]]
+            target_indices = sorted(target_indices, key=lambda x: np.linalg.norm(target_pointcloud[x] - previous_point))
+        
+        ordered_target_indices.extend(target_indices)
     
-    # Sort by source index to maintain original order
-    final_source_indices = sorted(final_source_indices, key=lambda x: x[0])
-    ordered_target_indices = [target_idx for _, target_idx in final_source_indices]
     ordered_target_pointcloud = target_pointcloud[ordered_target_indices, :]
-
+    # if len(ordered_target_pointcloud) > 50: 
+    #     print("no resampling needed!")
+    # else:
+    #     spline = resample_points_with_bspline(ordered_target_pointcloud)
+    #     distances, indices = nn.kneighbors(spline)
+    #     spline_to_target = {spline_idx: target_idx for spline_idx, target_idx in zip(indices.flatten(), distances.flatten())}
+    #     spline_points = spline[spline_to_target.keys(), :]
+    #     ordered_target_pointcloud = spline_points[np.argsort(spline_to_target.keys())]
+    
     if visualize:
         # color based on increasing index
         colors = np.interp(range(len(ordered_target_pointcloud)), [0, len(ordered_target_pointcloud)], [0, 1])
@@ -119,6 +179,20 @@ def track_state(source_pointcloud, target_pointcloud, visualize=False):
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
+
+        # Ensure all axes have the same scale
+        min_vals = np.min(ordered_target_pointcloud, axis=0)
+        max_vals = np.max(ordered_target_pointcloud, axis=0)
+        max_range = np.max(max_vals - min_vals) / 2.0
+
+        mid_x = (max_vals[0] + min_vals[0]) / 2.0
+        mid_y = (max_vals[1] + min_vals[1]) / 2.0
+        mid_z = (max_vals[2] + min_vals[2]) / 2.0
+
+        ax.set_xlim(mid_x - max_range, mid_x + max_range)
+        ax.set_ylim(mid_y - max_range, mid_y + max_range)
+        ax.set_zlim(mid_z - max_range, mid_z + max_range)
+
         plt.show()
 
     return ordered_target_pointcloud
