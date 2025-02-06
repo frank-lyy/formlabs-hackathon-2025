@@ -124,10 +124,6 @@ def resample_points_with_bspline(points, s=0.1, k=3, min_points=30):
     Fit a B-spline to the points and resample to get at least min_points points.
     Maintains the ordering of points along the spline.
     """
-    if len(points) > min_points: 
-        print("no resampling needed!")
-        return points
-    
     print("resampling!")
     x, y, z = points[:, 0], points[:, 1], points[:, 2]
     tck, u = splprep([x, y, z], s=s, k=k)
@@ -147,24 +143,33 @@ def track_state(source_pointcloud, target_pointcloud, visualize=False):
     distances, indices = nn.kneighbors(TY)
 
     # Create a mapping of each unique target index to all the TY points that map to it
-    target_to_source = {}
+    source_to_target = {}
     for source_idx, (target_idx, dist) in enumerate(zip(indices.flatten(), distances.flatten())):
-        if target_idx not in target_to_source:
-            target_to_source[target_idx] = (source_idx, dist)
-        elif dist < target_to_source[target_idx][1]:
-            target_to_source[target_idx] = (source_idx, dist)
+        if source_idx not in source_to_target:
+            source_to_target[source_idx] = set([target_idx])
+        else:
+            source_to_target[source_idx].add(target_idx)
     
-    # For each target point that has multiple matches, keep only the closest one
-    final_source_indices = []
-    for target_idx, (source_idx, dist) in target_to_source.items():
-        final_source_indices.append((source_idx, target_idx))
+    # Iterate through the source indices and find the target indices that map to each source index
+    # ordering by the minimum distance to the previous picked point
+    ordered_target_indices = []
+    for source_idx, target_indices in source_to_target.items():
+        if ordered_target_indices:
+            previous_point = target_pointcloud[ordered_target_indices[-1]]
+            target_indices = sorted(target_indices, key=lambda x: np.linalg.norm(target_pointcloud[x] - previous_point))
+        
+        ordered_target_indices.extend(target_indices)
     
-    # Sort by source index to maintain original order
-    final_source_indices = sorted(final_source_indices, key=lambda x: x[0])
-    ordered_target_indices = [target_idx for _, target_idx in final_source_indices]
     ordered_target_pointcloud = target_pointcloud[ordered_target_indices, :]
-    ordered_target_pointcloud = resample_points_with_bspline(ordered_target_pointcloud)
-
+    # if len(ordered_target_pointcloud) > 50: 
+    #     print("no resampling needed!")
+    # else:
+    #     spline = resample_points_with_bspline(ordered_target_pointcloud)
+    #     distances, indices = nn.kneighbors(spline)
+    #     spline_to_target = {spline_idx: target_idx for spline_idx, target_idx in zip(indices.flatten(), distances.flatten())}
+    #     spline_points = spline[spline_to_target.keys(), :]
+    #     ordered_target_pointcloud = spline_points[np.argsort(spline_to_target.keys())]
+    
     if visualize:
         # color based on increasing index
         colors = np.interp(range(len(ordered_target_pointcloud)), [0, len(ordered_target_pointcloud)], [0, 1])
