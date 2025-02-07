@@ -266,7 +266,9 @@ def main(stop_event):
             if time.time() - prev_image_time > 4:
                 prev_image_time = time.time()
                 new_orange_target_points = get_state(string_state.orange_data["source_points"], cleaned_orange, visualize=True)
-                new_blue_target_points = get_state(string_state.blue_data["source_points"], cleaned_blue, visualize=True)
+                new_blue_target_points = get_state(string_state.blue_data["source_points"], cleaned_blue, visualize=False)
+                segments = pointcloud_to_segments(new_orange_target_points, template=SLIGHT_BEND_TEMPLATE, visualize=visualize)
+                visualize_segments_2d(new_orange_target_points, segments)
             else:
                 new_orange_target_points = get_state(string_state.orange_data["source_points"], cleaned_orange, visualize=False)
                 new_blue_target_points = get_state(string_state.blue_data["source_points"], cleaned_blue, visualize=False)
