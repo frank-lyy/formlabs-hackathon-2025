@@ -8,7 +8,7 @@ import numpy as np
 import time
 import threading
 
-FPS = 2
+FPS = 4
 record_data = True
 
 # Store data
@@ -23,10 +23,12 @@ class StringState:
     def set_orange_data(self, new_data):
         with self.orange_lock:
             self.orange_data["target_points"] = new_data
+            self.orange_data["source_points"] = new_data
     
     def set_blue_data(self, new_data):
         with self.blue_lock:
             self.blue_data["target_points"] = new_data
+            self.blue_data["source_points"] = new_data
     
     def get_orange_data(self):
         with self.orange_lock:
@@ -245,6 +247,7 @@ def main(stop_event):
         # image_blue = get_masked_image(image, mask_blue)
 
         # Store data
+        prev_image_time = time.time()
         if time.time() - prev_time > 1 / FPS and record_data:
             prev_time = time.time()
             cleaned_blue = clean_data(mask_blue, points, quad_mask, visualize=False)
@@ -260,12 +263,15 @@ def main(stop_event):
             cv2.resizeWindow("Blue | Orange", 800, 600)
             cv2.imshow("Blue | Orange", side_by_side)
 
-            new_orange_target_points = get_state(string_state.orange_data["source_points"], cleaned_orange, visualize=True)
-            new_blue_target_points = get_state(string_state.blue_data["source_points"], cleaned_blue, visualize=False)
+            if time.time() - prev_image_time > 4:
+                prev_image_time = time.time()
+                new_orange_target_points = get_state(string_state.orange_data["source_points"], cleaned_orange, visualize=True)
+                new_blue_target_points = get_state(string_state.blue_data["source_points"], cleaned_blue, visualize=True)
+            else:
+                new_orange_target_points = get_state(string_state.orange_data["source_points"], cleaned_orange, visualize=False)
+                new_blue_target_points = get_state(string_state.blue_data["source_points"], cleaned_blue, visualize=False)
             string_state.set_orange_data(new_orange_target_points)
             string_state.set_blue_data(new_blue_target_points)
-            string_state.orange_data["source_points"] = new_orange_target_points
-            string_state.blue_data["source_points"] = new_blue_target_points
 
         # Quit
         if cv2.waitKey(1) == ord("q"):

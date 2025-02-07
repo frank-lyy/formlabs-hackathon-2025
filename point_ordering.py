@@ -15,5 +15,5 @@ def order_points_by_angle(pointcloud, normed_pointcloud):
 
 def order_points_by_y(pointcloud, normed_pointcloud):
     new_pointcloud = pointcloud[np.argsort(normed_pointcloud[:, 1])]
-    colors = np.interp(normed_pointcloud[:, 1], [np.min(normed_pointcloud[:, 1]), np.max(normed_pointcloud[:, 1])], [0, 1])
+    colors = np.interp(normed_pointcloud[:, 1], [np.min(normed_pointcloud[:, 1]), np.max(normed_pointcloud[:, 1])], [0, 255])
     return new_pointcloud, colors

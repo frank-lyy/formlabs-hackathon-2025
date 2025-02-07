@@ -119,18 +119,16 @@ def pc_registration(pointcloud_1, pointcloud_2, visualize=False):
     
     return TY
 
-def resample_points_with_bspline(points, s=0.1, k=5, min_points=30):
+def resample_points(points, s=0.1, k=5, num_resampled_points=100):
     """
     Fit a B-spline to the points and resample to get at least min_points points.
     Maintains the ordering of points along the spline.
     """
-    print("resampling!")
     x, y, z = points[:, 0], points[:, 1], points[:, 2]
     tck, u = splprep([x, y, z], s=s, k=k)
 
     # Calculate number of points needed
-    n_points = max(2 * min_points, len(points))
-    x_new, y_new, z_new = splev(np.linspace(0, 1, n_points), tck)
+    x_new, y_new, z_new = splev(np.linspace(0, 1, num_resampled_points), tck)
     
     return np.column_stack([x_new, y_new, z_new])
 
@@ -165,14 +163,6 @@ def track_state(source_pointcloud, target_pointcloud, visualize=False):
         ordered_target_indices.extend(target_indices)
     
     ordered_target_pointcloud = target_pointcloud[ordered_target_indices, :]
-    # if len(ordered_target_pointcloud) > 50: 
-    #     print("no resampling needed!")
-    # else:
-    #     spline = resample_points_with_bspline(ordered_target_pointcloud)
-    #     distances, indices = nn.kneighbors(spline)
-    #     spline_to_target = {spline_idx: target_idx for spline_idx, target_idx in zip(indices.flatten(), distances.flatten())}
-    #     spline_points = spline[spline_to_target.keys(), :]
-    #     ordered_target_pointcloud = spline_points[np.argsort(spline_to_target.keys())]
     
     if visualize:
         # color based on increasing index
@@ -271,5 +261,3 @@ if __name__ == "__main__":
         target_pointcloud = cleaned_data['points'][i]
         ordered_target_pointcloud = track_state(source_pointcloud, target_pointcloud, visualize=True)
         source_pointcloud = ordered_target_pointcloud
-        # if i > 3:
-        #     break
