@@ -59,6 +59,8 @@ def KinematicTrajOpt(plant, real_plant_context, endowrist_model_instance_idx, fr
                      wrist_joint_idx, X_Start, X_Goal, prev_open_close, acceptable_pos_err=0.001, 
                      acceptable_angle_error=0.05, acceptable_vel_err=0.01) -> BsplineTrajectory: 
     
+    JOINT_MAX_ACCELS = 0.5  # rad/s^2
+    
     frame = plant.GetFrameByName(frame_name, endowrist_model_instance_idx)
     
     # If the start and goal are close, return a linear interpolation between the start and goal configurations
@@ -96,10 +98,11 @@ def KinematicTrajOpt(plant, real_plant_context, endowrist_model_instance_idx, fr
         plant.GetPositionLowerLimits(), plant.GetPositionUpperLimits()
     )
     trajopt.AddVelocityBounds(
-        plant.GetVelocityLowerLimits()/5, plant.GetVelocityUpperLimits()/5
+        plant.GetVelocityLowerLimits()/10, plant.GetVelocityUpperLimits()/10
     )
+    # Note: plant.GetAccelerationUpperLimits() just seems to return infinity
     trajopt.AddAccelerationBounds(
-        plant.GetAccelerationLowerLimits()/25, plant.GetAccelerationUpperLimits()/25
+        -JOINT_MAX_ACCELS * np.ones(plant.num_positions()), JOINT_MAX_ACCELS * np.ones(plant.num_positions())
     )
     
     start_pos_constraint = PositionConstraint(

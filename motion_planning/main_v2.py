@@ -174,12 +174,6 @@ def main(stop_event):
     time.sleep(3)
     meshcat.PublishRecording()
 
-    collision_checker_params = {}
-    collision_checker_params["robot_model_instances"] = robot_model_instances
-    collision_checker_params["model"] = diagram
-    collision_checker_params["edge_step_size"] = 0.125
-    collision_checker = SceneGraphCollisionChecker(**collision_checker_params)
-
 if __name__ == "__main__":
     stop_event = threading.Event()
     main(stop_event)

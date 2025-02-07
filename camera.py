@@ -1,4 +1,4 @@
-import pyzed.sl as sl
+# import pyzed.sl as sl
 import numpy as np
 
 def initialize_camera():
