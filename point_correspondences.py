@@ -157,10 +157,13 @@ def track_state(source_pointcloud, target_pointcloud, visualize=False):
 
         target_indices = source_to_target[source_idx]
         if ordered_target_indices:
-            previous_point = target_pointcloud[ordered_target_indices[-1]]
-            target_indices = sorted(target_indices, key=lambda x: np.linalg.norm(target_pointcloud[x] - previous_point))
-        
-        ordered_target_indices.extend(target_indices)
+            while len(target_indices) > 0:
+                previous_point = target_pointcloud[ordered_target_indices[-1]]
+                target_indices = sorted(target_indices, key=lambda x: np.linalg.norm(target_pointcloud[x] - previous_point), reverse=True)
+                next_index = target_indices.pop()
+                ordered_target_indices.append(next_index)
+        else:
+            ordered_target_indices.extend(target_indices)
     
     ordered_target_pointcloud = target_pointcloud[ordered_target_indices, :]
     
