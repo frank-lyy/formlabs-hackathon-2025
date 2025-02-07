@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 import time
 import threading
+import json
 
 FPS = 4
 record_data = True
@@ -16,7 +17,7 @@ class StringState:
     def __init__(self):
         self.orange_data = {}
         self.blue_data = {}
-        self.corners = None
+        self.corners = np.array([(367, 269), (853, 264), (919, 598), (338, 577)]) 
         self.orange_lock = threading.Lock()
         self.blue_lock = threading.Lock()
     
@@ -177,6 +178,7 @@ def main(stop_event):
     # Initialize camera
     zed = initialize_camera()
     prev_time = time.time()
+    prev_image_time = time.time()
 
     # Corner choosing stage
     while not stop_event.is_set():
@@ -193,6 +195,7 @@ def main(stop_event):
                 quad_mask = create_quad_mask(depth.shape, string_state.corners)
             else:
                 print("Corners already selected")
+                quad_mask = create_quad_mask(depth.shape, string_state.corners)
                 break
 
         # Move on to next step
@@ -235,7 +238,8 @@ def main(stop_event):
             print("Initial states set. Begin Tracking.")
             print("There are {} orange points and {} blue points".format(len(string_state.orange_data["source_points"]), len(string_state.blue_data["source_points"])))
             break
-
+    
+    data = []
     while not stop_event.is_set():
         # Get data
         image, depth, points = get_camera_data(zed)
@@ -247,7 +251,6 @@ def main(stop_event):
         # image_blue = get_masked_image(image, mask_blue)
 
         # Store data
-        prev_image_time = time.time()
         if time.time() - prev_time > 1 / FPS and record_data:
             prev_time = time.time()
             cleaned_blue = clean_data(mask_blue, points, quad_mask, visualize=False)
@@ -262,12 +265,16 @@ def main(stop_event):
             side_by_side = cv2.hconcat([cleaned_blue_image, cleaned_orange_image])
             cv2.resizeWindow("Blue | Orange", 800, 600)
             cv2.imshow("Blue | Orange", side_by_side)
+            relevant_depth = points[improved_mask_orange]
+            print(relevant_depth.shape)
+            data.append(relevant_depth.tolist())
+            
 
-            if time.time() - prev_image_time > 4:
+            if time.time() - prev_image_time > 100:
                 prev_image_time = time.time()
                 new_orange_target_points = get_state(string_state.orange_data["source_points"], cleaned_orange, visualize=True)
                 new_blue_target_points = get_state(string_state.blue_data["source_points"], cleaned_blue, visualize=False)
-                segments = pointcloud_to_segments(new_orange_target_points, template=SLIGHT_BEND_TEMPLATE, visualize=visualize)
+                segments = pointcloud_to_segments(new_orange_target_points, template=SLIGHT_BEND_TEMPLATE, visualize=False)
                 visualize_segments_2d(new_orange_target_points, segments)
             else:
                 new_orange_target_points = get_state(string_state.orange_data["source_points"], cleaned_orange, visualize=False)
@@ -277,6 +284,8 @@ def main(stop_event):
 
         # Quit
         if cv2.waitKey(1) == ord("q"):
+            with open('data/data.json', 'w+') as file:
+                json.dump(data, file)
             break
 
     # Close the ZED

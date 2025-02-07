@@ -29,7 +29,7 @@ def create_quad_mask(image_shape, corners=CORNERS):
     cv2.fillPoly(quad_mask, [corners_array], 1)
     return quad_mask
 
-def clean_data(mask, points, quad_mask, voxel_size=0.04, visualize=False):
+def clean_data(mask, points, quad_mask, voxel_size=0.005, visualize=False):
     """ 
     takes in a single mask and pointcloud and returns a cleaned version
     pointclouds have been downsampled and (improved) masks have been applied

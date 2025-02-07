@@ -163,9 +163,19 @@ def track_state(source_pointcloud, target_pointcloud, visualize=False):
                 next_index = target_indices.pop()
                 ordered_target_indices.append(next_index)
         else:
+            target_indices = sorted(target_indices, key=lambda x: target_pointcloud[x][1], reverse=True)
             ordered_target_indices.extend(target_indices)
     
-    ordered_target_pointcloud = target_pointcloud[ordered_target_indices, :]
+    short_ordered_target_pointcloud = target_pointcloud[ordered_target_indices, :]
+    ordered_target_pointcloud = []
+    for idx in range(short_ordered_target_pointcloud.shape[0]-1):
+        p1 = short_ordered_target_pointcloud[idx]
+        p2 = short_ordered_target_pointcloud[idx+1]
+        subpoints = 1
+        for i in range(subpoints):
+            ordered_target_pointcloud.append(i/subpoints * p1 + (subpoints-i)/subpoints * p2)
+    ordered_target_pointcloud = np.array(ordered_target_pointcloud)
+
     
     if visualize:
         # color based on increasing index
