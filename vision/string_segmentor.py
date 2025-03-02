@@ -1,3 +1,17 @@
+from pydrake.all import (
+    StartMeshcat,
+    AddDefaultVisualization,
+    Simulator,
+    RobotDiagramBuilder,
+    SceneGraphCollisionChecker,
+    RandomGenerator,
+    PointCloud,
+    Rgba,
+    Quaternion,
+    RigidTransform,
+    RotationMatrix,
+)
+
 from camera import *
 from data_loader import *
 from point_correspondences import *
@@ -8,6 +22,35 @@ import numpy as np
 import time
 import threading
 import json
+
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+src_directory = os.path.dirname(os.path.abspath(__file__))
+parent_directory = os.path.dirname(src_directory)
+data_directory = os.path.join(parent_directory)
+scene_yaml_file = os.path.join(data_directory, "assets", "robot.dmd.yaml")
+
+meshcat = StartMeshcat()
+
+robot_diagram_builder = RobotDiagramBuilder()
+parser = robot_diagram_builder.parser()
+scene_graph = robot_diagram_builder.scene_graph()
+parser.package_map().Add("Robot.SLDASM", os.path.join(data_directory, "assets/Robot.SLDASM"))
+parser.package_map().Add("Endowrist Mockup.SLDASM", os.path.join(data_directory, "assets/Endowrist Mockup.SLDASM"))
+parser.package_map().Add("assets", os.path.join(data_directory, "assets"))
+robot_model_instances = parser.AddModels(scene_yaml_file)
+plant = robot_diagram_builder.plant()
+plant.Finalize()
+diagram = robot_diagram_builder.Build()
+simulator = Simulator(diagram)
+context = simulator.get_mutable_context()
+plant_context = plant.GetMyMutableContextFromRoot(context)
+
+camera_frame = plant.GetFrameByName("zed2i_left_camera_optical_frame")
+X_W_Cam = plant.CalcRelativeTransform(plant_context, plant.world_frame(), camera_frame)
+print(f"X_W_Cam: {X_W_Cam.translation()}, {X_W_Cam.rotation().matrix()}")
 
 FPS = 4
 record_data = True
