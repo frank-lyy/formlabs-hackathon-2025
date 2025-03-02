@@ -20,9 +20,9 @@ class HighLevelPlanner():
         with open("high_level_plan.yaml", "r") as file:
             data = yaml.safe_load(file)
             
-        self.steps = []
+        self.shoe_tying_steps = []
         self.max_step_num = 0
-        for step in data["steps"]:
+        for step in data["shoe_tying_steps"]:
             step_data = {
                 "step_id": step["step_id"],
                 "description": step["description"],
@@ -31,11 +31,12 @@ class HighLevelPlanner():
                 "l_target_pose": step["l_target_pose"],
                 "r_target_pose": step["r_target_pose"],
                 "l_open_close": step["l_open_close"],
-                "r_open_close": step["r_open_close"]
+                "r_open_close": step["r_open_close"],
+                "additional_objectives": step.get("additional_objectives", None)
             }
 
             # Store processed step
-            self.steps.append(step_data)
+            self.shoe_tying_steps.append(step_data)
             
             self.max_step_num = step["step_id"]
     
@@ -46,6 +47,8 @@ class HighLevelPlanner():
         """
         x is an array of 3 coordinates. Translates x from Zed's left camera optical
         frame to world frame.
+        
+        Utility function to be used in `high_level_plan.yaml`
         """
         X_cam = RigidTransform(RotationMatrix(), x)
         world_T_cam = self.plant.CalcRelativeTransform(self.plant_context, self.plant.world_frame(), self.plant.GetFrameByName("zed2i_left_camera_optical_frame"))
@@ -53,10 +56,10 @@ class HighLevelPlanner():
         return X_world.translation()
 
     def get_next_action(self):
-        if self.step_num > self.max_step_num:  # all actions performed
+        if self.step_num > self.max_step_num:  # all shoe tying steps finished
             return None, None, None, None
         
-        step_data = self.steps[self.step_num]
+        step_data = self.shoe_tying_steps[self.step_num]
         left_reference_point_cloud = np.array(step_data["left_reference_point_cloud"])
         right_reference_point_cloud = np.array(step_data["right_reference_point_cloud"])
         
@@ -76,6 +79,7 @@ class HighLevelPlanner():
             "right_eef_frame": self.right_eef_frame,
             "left_reference_point_cloud": left_reference_point_cloud,
             "right_reference_point_cloud": right_reference_point_cloud,
+            "additional_objectives": step_data["additional_objectives"]
         }
         
         exec(step_data["l_target_pose"], exec_namespace)
@@ -86,7 +90,8 @@ class HighLevelPlanner():
         
         l_open_close = step_data["l_open_close"]
         r_open_close = step_data["r_open_close"]
-            
+        additional_objectives = step_data["additional_objectives"]
+        
         self.step_num += 1
         
-        return l_target_pose, r_target_pose, l_open_close, r_open_close
+        return l_target_pose, r_target_pose, l_open_close, r_open_close, additional_objectives

@@ -18,3 +18,4 @@ IPython
 scikit-learn==1.6.1
 pyzed
 fastdtw==0.3.4
+pyserial

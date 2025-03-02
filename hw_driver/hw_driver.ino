@@ -33,10 +33,12 @@ AccelStepper stepperB(AccelStepper::DRIVER, 3, 6);
 // Stepper motor settings
 #define EN_PIN 8                 // Enable pin for stepper drivers
 #define STEPS_PER_REV 200        // Steps per revolution (depends on your stepper motor)
-#define STEPPER_A_RATIO 1.0      // Gear ratio or offset for stepper A
-#define STEPPER_B_RATIO 1.0      // Gear ratio or offset for stepper B
-#define STEPPER_MAX_SPEED   30  // steps/s
-#define STEPPER_ACCEL       20  // steps/s^2
+#define STEPPER_A_RATIO 50.0      // Gear ratio or offset for stepper A
+#define STEPPER_B_RATIO 4.0      // Gear ratio or offset for stepper B
+#define STEPPER_A_MAX_SPEED   800  // steps/s
+#define STEPPER_A_ACCEL       8000  // steps/s^2
+#define STEPPER_B_MAX_SPEED   200  // steps/s
+#define STEPPER_B_ACCEL       6000  // steps/s^2
 
 /**
  * moveArm()
@@ -218,20 +220,16 @@ void setup() {
 
   //engage_couplers();
 
-  // Set enable pins for steppers
-  pinMode(EN_PIN, OUTPUT);
-  digitalWrite(EN_PIN, LOW); 
-
   // Stepper enable pin
   pinMode(EN_PIN, OUTPUT);
   digitalWrite(EN_PIN, LOW); // LOW to enable stepper drivers
 
   // Configure stepper speeds and accelerations
-  stepperA.setMaxSpeed(STEPPER_MAX_SPEED);
-  stepperA.setAcceleration(STEPPER_ACCEL);
+  stepperA.setMaxSpeed(STEPPER_A_MAX_SPEED);
+  stepperA.setAcceleration(STEPPER_A_ACCEL);
 
-  stepperB.setMaxSpeed(STEPPER_MAX_SPEED);
-  stepperB.setAcceleration(STEPPER_ACCEL);
+  stepperB.setMaxSpeed(STEPPER_B_MAX_SPEED);
+  stepperB.setAcceleration(STEPPER_B_ACCEL);
 }
 
 uint8_t inBytes[CMD_LEN];  // Buffer for incoming command bytes

@@ -1,3 +1,7 @@
+"""
+Test motion planner script with hard-coded sequence of actions.
+"""
+
 from pydrake.all import (
     StartMeshcat,
     AddDefaultVisualization,

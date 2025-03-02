@@ -1,8 +1,15 @@
+"""
+Test program to teleop the joints of the robot using the keyboard.
+"""
+
 import serial 
 import time
 
+SERIAL_PORT0 = "/dev/ttyACM0"
+# SERIAL_PORT0 = "/dev/ttyACM1"
+
 class Commander:
-    DATA_LEN = 9 # Length of the command exclusing the first 0xFF and action index
+    DATA_LEN = 9  # Length of the command exclusing the first 0xFF and action index
 
     def __init__(self, ser0, ser1):
         self.ser = [ser0, ser1]
@@ -19,7 +26,10 @@ class Commander:
 
         if debug:
             if len(resp) == 2 and resp[0] == 0xFF:
-                print(f"Arduino responded with code {resp[1]}")
+                # 0x00: Successful Arm Movement
+                # 0x01: Successful Endo Wrist Movement
+                # 0x02: Successful Wrist Movement
+                print(f"Arduino responded with code {hex(resp[1])}")
             else:
                 print(f"No response received (timeout)")
 
@@ -49,8 +59,10 @@ class Commander:
         self.send_command(ser_idx, 0x02, servo_idx + angle, debug)
 
 def main():
-    ser0 = serial.Serial(port="/dev/ttyACM1", baudrate=9600, timeout=5) 
-    commander = Commander(ser0, None)
+    ser0 = serial.Serial(port=SERIAL_PORT0, baudrate=9600, timeout=5) 
+    # ser1 = serial.Serial(port=SERIAL_PORT1, baudrate=9600, timeout=5)
+    ser1 = None
+    commander = Commander(ser0, ser1)
     time.sleep(1)
 
     try:
@@ -61,17 +73,22 @@ def main():
             print("[1]: move_endo_wrist")
             print("[2]: move_wrist")
             command = int(input())
+            command_valid = command < 3
 
             target = 0
-            if command < 3:
+            if command_valid:
+                # Ask which Arduino to send the command to
+                # 0 or 1
                 target = int(input("Target Arduino: "))
 
             if command == 0:
+                # Move arm
                 angleA = int(input("Angle A: "))
                 angleB = int(input("Angle B: "))
                 commander.move_arm(target, angleA, angleB)
 
             elif command == 1:
+                # Move endo_wrist
                 wrist_idx = int(input("Wrist index: "))
                 angleA = int(input("Angle A: "))
                 angleB = int(input("Angle B: "))
@@ -80,6 +97,7 @@ def main():
                 commander.move_endo_wrist(target, wrist_idx, angleA, angleB, angleC, angleD)
 
             elif command == 2:
+                # Move wrist
                 servo_idx = int(input("Servo index: "))
                 angle = int(input("Angle: "))
                 commander.move_wrist(target, servo_idx, angle)

@@ -56,8 +56,9 @@ def VisualizePath(meshcat, plant, frame, traj, name):
         
         
 def KinematicTrajOpt(plant, real_plant_context, endowrist_model_instance_idx, frame_name, 
-                     wrist_joint_idx, X_Start, X_Goal, prev_open_close, acceptable_pos_err=0.001, 
-                     acceptable_angle_error=0.05, acceptable_vel_err=0.01) -> BsplineTrajectory: 
+                     wrist_joint_idx, X_Start, X_Goal, prev_open_close, additional_objectives, 
+                     acceptable_pos_err=0.001, acceptable_angle_error=0.05, 
+                     acceptable_vel_err=0.01) -> BsplineTrajectory: 
     
     JOINT_MAX_ACCELS = 0.5  # rad/s^2
     
@@ -93,6 +94,10 @@ def KinematicTrajOpt(plant, real_plant_context, endowrist_model_instance_idx, fr
     control_points = trajopt.control_points()  # M-by-N matrix (M: positions, N: control points)
     for i in range(control_points.shape[1]):  # N control points
         prog.AddQuadraticCost(weight * (control_points[wrist_joint_idx, i] - (-0.4)) ** 2)  # Target wrist-to-endowrist angle: -0.4 radians
+    
+    # Add any additional objectives defined in high_level_plan.yaml
+    for objective in additional_objectives:
+        prog.AddCost(objective)
     
     trajopt.AddPositionBounds(
         plant.GetPositionLowerLimits(), plant.GetPositionUpperLimits()
