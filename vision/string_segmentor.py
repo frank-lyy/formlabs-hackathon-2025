@@ -265,9 +265,9 @@ def main(stop_event):
             side_by_side = cv2.hconcat([cleaned_blue_image, cleaned_orange_image])
             cv2.resizeWindow("Blue | Orange", 800, 600)
             cv2.imshow("Blue | Orange", side_by_side)
-            relevant_depth = points[improved_mask_orange]
-            print(relevant_depth.shape)
-            data.append(relevant_depth.tolist())
+            # relevant_depth = points[improved_mask_orange]
+            # print(relevant_depth.shape)
+            # data.append(relevant_depth.tolist())
             
 
             if time.time() - prev_image_time > 100:
@@ -284,8 +284,8 @@ def main(stop_event):
 
         # Quit
         if cv2.waitKey(1) == ord("q"):
-            with open('data/data.json', 'w+') as file:
-                json.dump(data, file)
+            # with open('data/data.json', 'w+') as file:
+                # json.dump(data, file)
             break
 
     # Close the ZED
