@@ -103,7 +103,7 @@ def pointcloud_to_segments(points, template, window_size=WINDOW_SIZE, visualize=
     labels = [SegmentType.color(SegmentType.SEGMENT) for _ in range(points.shape[0])]
 
     # Detect Feature
-    best_index, best_error = match_template(points, template_points=template, window_size=window_size, visualize=visualize)
+    best_index, best_error = match_template(points, template_points=template, window_size=window_size, error_threshold=1.0, visualize=visualize)
     if best_index is not None:
         for i in range(best_index-window_size, best_index+window_size):
             labels[i] = SegmentType.color(SegmentType.FEATURE)
