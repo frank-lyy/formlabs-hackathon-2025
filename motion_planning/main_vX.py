@@ -82,8 +82,6 @@ right_wrist_joint_idx = plant.GetJointByName("joint_wrist_right_endowrist_right"
 # Collect left and right arm joint indices for convenience (must be called post-Finalize)
 left_arm_joint_indices, right_arm_joint_indices = get_left_right_joint_indices(plant, endowrist_left_model_instance_idx, 
                                                                               endowrist_right_model_instance_idx, arms_model_instance_idx)
-print(f"left_arm_joint_indices: {left_arm_joint_indices}")
-print(f"right_arm_joint_indices: {right_arm_joint_indices}")
 
 
 AddDefaultVisualization(robot_diagram_builder.builder(), meshcat=meshcat)

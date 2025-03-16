@@ -269,7 +269,7 @@ simply not possible in real life / out of the domain of normal operation. -->
       xyz="0 0 1" />
     <limit
       lower="-0.7"
-      upper="-0.2"
+      upper="0.0"
       effort="15"
       velocity="2" />
   </joint>
@@ -496,7 +496,7 @@ simply not possible in real life / out of the domain of normal operation. -->
       xyz="0 0 1" />
     <limit
       lower="-0.7"
-      upper="-0.2"
+      upper="0.0"
       effort="15"
       velocity="2" />
   </joint>
