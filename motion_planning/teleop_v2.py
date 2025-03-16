@@ -24,6 +24,8 @@ from pydrake.all import (
 )
 from manipulation.scenarios import AddMultibodyTriad
 
+from motion_utils import get_left_right_joint_indices, ik
+
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -143,9 +145,11 @@ class VectorSplitter(LeafSystem):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--joint_control', default='F', help="T/F; whether to control joint positions (instead of xyz rpy)")
+parser.add_argument('--joint_control', default='T', help="T/F; whether to control joint positions (instead of xyz rpy)")
 args = parser.parse_args()
 joint_control = (args.joint_control == 'T')
+
+assert joint_control, "Joint control is not supported yet"
 
 
 meshcat = StartMeshcat()
@@ -220,57 +224,83 @@ else:
     meshcat.AddSlider('yaw', -np.pi, np.pi, 0.01, default_pose.rotation().ToRollPitchYaw().vector()[2])
 meshcat.AddButton("Close")
 
-# Figure out how many robots there are and how many joints each has
-model_instances_indices_with_actuators = {}
-for actuator_idx in plant.GetJointActuatorIndices():
-    robot_model_instance_idx = plant.get_joint_actuator(actuator_idx).model_instance()
-    if robot_model_instance_idx not in model_instances_indices_with_actuators.keys():
-        model_instances_indices_with_actuators[robot_model_instance_idx] = 1
-    else:
-        model_instances_indices_with_actuators[robot_model_instance_idx] += 1
-        
-print(model_instances_indices_with_actuators)
 
-# for model_instance_idx in model_instances_indices_with_actuators.keys():
-#     plant.set_gravity_enabled(model_instance_idx, False)
-
-# Add Meshcat Slider Source System
-slider_source = builder.AddSystem(MeshcatSliderSource(meshcat))
-
-# Add controller and splitter (for when there are multiple robots)
-controller = builder.AddSystem(InverseDynamicsController(plant, [100]*num_robot_positions, [0]*num_robot_positions, [50]*num_robot_positions, True))  # True = exposes "desired_acceleration" port
-control_splitter = builder.AddSystem(VectorSplitter(*model_instances_indices_with_actuators.values()))
-
-# Set controller desired state
-builder.Connect(station.GetOutputPort("state"), controller.GetInputPort("estimated_state"))
-builder.Connect(controller.GetOutputPort("generalized_force"), control_splitter.GetInputPort("input"))
-
-if joint_control:
-    builder.Connect(slider_source.get_output_port(0), controller.GetInputPort("desired_state"))
-else:
-    # Add IK System
-    ik_system = builder.AddSystem(InverseKinematicsSystem(plant, meshcat))
-    # Connect sliders to IK system
-    builder.Connect(slider_source.get_output_port(0), ik_system.get_input_port(0))
-    builder.Connect(ik_system.get_output_port(0), controller.GetInputPort("desired_state"))
-
-slider_source_context = slider_source.GetMyMutableContextFromRoot(simulator_context)
-if not joint_control:
-    ik_system_context = ik_system.GetMyMutableContextFromRoot(simulator_context)
-
-# Main simulation loop
-meshcat.StartRecording()
-ctr = 0
-plant.SetPositions(plant_context, slider_source.get_output_port(0).Eval(slider_source_context)[:num_robot_positions])
 while not meshcat.GetButtonClicks("Close"):
-    # if joint_control:
-    #     plant.SetPositions(plant_context, slider_source.get_output_port(0).Eval(slider_source_context)[:num_robot_positions])
-    # else:
-    #     plant.SetPositions(plant_context, ik_system.get_output_port(0).Eval(ik_system_context)[:num_robot_positions])
-    simulator.AdvanceTo(simulator_context.get_time() + 0.001)
-    ctr += 1
-    if (ctr == 1000):
-        ctr = 0
-        print(plant.GetPositions(plant_context))
+    if joint_control:
+        # Get joint positions from sliders
+        q = []
+        for i in range(num_robot_positions):
+            q.append(meshcat.GetSliderValue(f'q{i}'))
         
-meshcat.PublishRecording()
+    plant.SetPositions(plant_context, q)
+    simulator.AdvanceTo(context.get_time() + 0.01)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# # Figure out how many robots there are and how many joints each has
+# model_instances_indices_with_actuators = {}
+# for actuator_idx in plant.GetJointActuatorIndices():
+#     robot_model_instance_idx = plant.get_joint_actuator(actuator_idx).model_instance()
+#     if robot_model_instance_idx not in model_instances_indices_with_actuators.keys():
+#         model_instances_indices_with_actuators[robot_model_instance_idx] = 1
+#     else:
+#         model_instances_indices_with_actuators[robot_model_instance_idx] += 1
+        
+# print(model_instances_indices_with_actuators)
+
+# # for model_instance_idx in model_instances_indices_with_actuators.keys():
+# #     plant.set_gravity_enabled(model_instance_idx, False)
+
+# # Add Meshcat Slider Source System
+# slider_source = builder.AddSystem(MeshcatSliderSource(meshcat))
+
+# # Add controller and splitter (for when there are multiple robots)
+# controller = builder.AddSystem(InverseDynamicsController(plant, [100]*num_robot_positions, [0]*num_robot_positions, [50]*num_robot_positions, True))  # True = exposes "desired_acceleration" port
+# control_splitter = builder.AddSystem(VectorSplitter(*model_instances_indices_with_actuators.values()))
+
+# # Set controller desired state
+# builder.Connect(station.GetOutputPort("state"), controller.GetInputPort("estimated_state"))
+# builder.Connect(controller.GetOutputPort("generalized_force"), control_splitter.GetInputPort("input"))
+
+# if joint_control:
+#     builder.Connect(slider_source.get_output_port(0), controller.GetInputPort("desired_state"))
+# else:
+#     # Add IK System
+#     ik_system = builder.AddSystem(InverseKinematicsSystem(plant, meshcat))
+#     # Connect sliders to IK system
+#     builder.Connect(slider_source.get_output_port(0), ik_system.get_input_port(0))
+#     builder.Connect(ik_system.get_output_port(0), controller.GetInputPort("desired_state"))
+
+# slider_source_context = slider_source.GetMyMutableContextFromRoot(simulator_context)
+# if not joint_control:
+#     ik_system_context = ik_system.GetMyMutableContextFromRoot(simulator_context)
+
+# # Main simulation loop
+# meshcat.StartRecording()
+# ctr = 0
+# plant.SetPositions(plant_context, slider_source.get_output_port(0).Eval(slider_source_context)[:num_robot_positions])
+# while not meshcat.GetButtonClicks("Close"):
+#     # if joint_control:
+#     #     plant.SetPositions(plant_context, slider_source.get_output_port(0).Eval(slider_source_context)[:num_robot_positions])
+#     # else:
+#     #     plant.SetPositions(plant_context, ik_system.get_output_port(0).Eval(ik_system_context)[:num_robot_positions])
+#     simulator.AdvanceTo(simulator_context.get_time() + 0.001)
+#     ctr += 1
+#     if (ctr == 1000):
+#         ctr = 0
+#         print(plant.GetPositions(plant_context))
+        
+# meshcat.PublishRecording()

@@ -35,6 +35,28 @@ def diagram_visualize_connections(diagram: Diagram, file: Union[BinaryIO, str]) 
     file.write(svg_data)
     
 
+def save_traj(traj, filename, dt=0.01):
+    """
+    Create npz file with dense sampling of the trajectory, including dt.
+
+    traj: Trajectory
+    filename: str
+    dt: float, time step
+    """
+    time_start = traj.start_time()
+    time_end = traj.end_time()
+
+    time_samples = np.arange(time_start, time_end, dt)
+    trajectory_data = []
+
+    for t in time_samples:
+        state = traj.value(t)
+        trajectory_data.append([t] + list(state))  # Append time and state as a list
+
+    trajectory_data = np.array(trajectory_data)
+    np.savez(filename, trajectory_data=trajectory_data, dt=dt)
+
+
 def ik(plant, frame, pose, rotation_offset=RotationMatrix(), translation_error=0, rotation_error=0.05, regions=None, pose_as_constraint=True) -> tuple[np.ndarray, bool]:
     """
     Use Inverse Kinematics to solve for a configuration that satisfies a
