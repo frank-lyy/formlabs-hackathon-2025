@@ -102,6 +102,7 @@ def clean_data(mask, points, quad_mask, voxel_size=0.005, visualize=False, kmean
     """    
     mask = improve_mask(mask, quad_mask, visualize=visualize)
     masked_points = points[mask]
+    masked_points = masked_points[~np.isnan(masked_points).any(axis=1)]
     cleaned_points = remove_outliers(masked_points, eps=0.01)
     downsampled_points = downsample_points(cleaned_points, voxel_size=voxel_size, kmeans=kmeans, k=k)
         

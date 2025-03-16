@@ -262,6 +262,7 @@ def main(stop_event):
         # Store data
         if time.time() - prev_time > 5 and record_data:
             prev_time = time.time()
+            mask_blue
             cleaned_blue = clean_data(mask_blue, points, quad_mask, voxel_size=0.005, visualize=False, kmeans=USE_KMEANS, k=NUM_CLUSTERS)
             cleaned_orange = clean_data(mask_orange, points, quad_mask, voxel_size=0.005, visualize=False, kmeans=USE_KMEANS, k=NUM_CLUSTERS)
             
