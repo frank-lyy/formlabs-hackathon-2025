@@ -186,6 +186,9 @@ AddMultibodyTriad(right_eef_frame, scene_graph, length=0.05, radius=0.001, opaci
 # Visualize zed2i camera transform
 AddMultibodyTriad(plant.GetFrameByName("zed2i_left_camera_optical_frame"), scene_graph, length=0.7, radius=0.001, opacity=0.5)
 
+for model_instance_idx in model_instances_indices_with_actuators.keys():
+    plant.set_gravity_enabled(model_instance_idx, False)
+
 plant.Finalize()
 
 # Collect wrist joint indices for convenience (must be called post-Finalize)
@@ -234,73 +237,3 @@ while not meshcat.GetButtonClicks("Close"):
         
     plant.SetPositions(plant_context, q)
     simulator.AdvanceTo(context.get_time() + 0.01)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# # Figure out how many robots there are and how many joints each has
-# model_instances_indices_with_actuators = {}
-# for actuator_idx in plant.GetJointActuatorIndices():
-#     robot_model_instance_idx = plant.get_joint_actuator(actuator_idx).model_instance()
-#     if robot_model_instance_idx not in model_instances_indices_with_actuators.keys():
-#         model_instances_indices_with_actuators[robot_model_instance_idx] = 1
-#     else:
-#         model_instances_indices_with_actuators[robot_model_instance_idx] += 1
-        
-# print(model_instances_indices_with_actuators)
-
-# # for model_instance_idx in model_instances_indices_with_actuators.keys():
-# #     plant.set_gravity_enabled(model_instance_idx, False)
-
-# # Add Meshcat Slider Source System
-# slider_source = builder.AddSystem(MeshcatSliderSource(meshcat))
-
-# # Add controller and splitter (for when there are multiple robots)
-# controller = builder.AddSystem(InverseDynamicsController(plant, [100]*num_robot_positions, [0]*num_robot_positions, [50]*num_robot_positions, True))  # True = exposes "desired_acceleration" port
-# control_splitter = builder.AddSystem(VectorSplitter(*model_instances_indices_with_actuators.values()))
-
-# # Set controller desired state
-# builder.Connect(station.GetOutputPort("state"), controller.GetInputPort("estimated_state"))
-# builder.Connect(controller.GetOutputPort("generalized_force"), control_splitter.GetInputPort("input"))
-
-# if joint_control:
-#     builder.Connect(slider_source.get_output_port(0), controller.GetInputPort("desired_state"))
-# else:
-#     # Add IK System
-#     ik_system = builder.AddSystem(InverseKinematicsSystem(plant, meshcat))
-#     # Connect sliders to IK system
-#     builder.Connect(slider_source.get_output_port(0), ik_system.get_input_port(0))
-#     builder.Connect(ik_system.get_output_port(0), controller.GetInputPort("desired_state"))
-
-# slider_source_context = slider_source.GetMyMutableContextFromRoot(simulator_context)
-# if not joint_control:
-#     ik_system_context = ik_system.GetMyMutableContextFromRoot(simulator_context)
-
-# # Main simulation loop
-# meshcat.StartRecording()
-# ctr = 0
-# plant.SetPositions(plant_context, slider_source.get_output_port(0).Eval(slider_source_context)[:num_robot_positions])
-# while not meshcat.GetButtonClicks("Close"):
-#     # if joint_control:
-#     #     plant.SetPositions(plant_context, slider_source.get_output_port(0).Eval(slider_source_context)[:num_robot_positions])
-#     # else:
-#     #     plant.SetPositions(plant_context, ik_system.get_output_port(0).Eval(ik_system_context)[:num_robot_positions])
-#     simulator.AdvanceTo(simulator_context.get_time() + 0.001)
-#     ctr += 1
-#     if (ctr == 1000):
-#         ctr = 0
-#         print(plant.GetPositions(plant_context))
-        
-# meshcat.PublishRecording()

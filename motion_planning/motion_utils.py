@@ -146,10 +146,10 @@ def get_left_right_joint_indices(plant, endowrist_left_model_instance_idx,
         "joint_arm_left_wrist_left",
         "joint_wrist_left_endowrist_left",
         # Endowrist joints for left arm
-        "joint_endowrist_box_endowrist_tube",
-        "joint_endowrist_tube_endowrist_body",
-        "joint_endowrist_body_endowrist_forcep1",
-        "joint_endowrist_body_endowrist_forcep2"
+        "joint_endowrist_box_endowrist_tube",  # Phi
+        "joint_endowrist_tube_endowrist_body",  # Theta
+        "joint_endowrist_body_endowrist_forcep1",  # Alpha
+        "joint_endowrist_body_endowrist_forcep2"  # Beta
     ]
 
     right_arm_joint_names = [
@@ -157,10 +157,10 @@ def get_left_right_joint_indices(plant, endowrist_left_model_instance_idx,
         "joint_arm_right_wrist_right",
         "joint_wrist_right_endowrist_right",
         # Endowrist joints for right arm
-        "joint_endowrist_box_endowrist_tube",
-        "joint_endowrist_tube_endowrist_body",
-        "joint_endowrist_body_endowrist_forcep1",
-        "joint_endowrist_body_endowrist_forcep2"
+        "joint_endowrist_box_endowrist_tube",  # Phi
+        "joint_endowrist_tube_endowrist_body",  # Theta
+        "joint_endowrist_body_endowrist_forcep1",  # Alpha
+        "joint_endowrist_body_endowrist_forcep2"  # Beta
     ]
 
     # Get indices for left arm joints
