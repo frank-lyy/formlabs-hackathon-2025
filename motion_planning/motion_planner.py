@@ -22,9 +22,10 @@ from pydrake.all import (
 from manipulation.meshcat_utils import AddMeshcatTriad
 from manipulation.utils import ConfigureParser
 
-from motion_utils import ik
+from motion_utils import ik, save_traj
 
 import time
+from datetime import datetime
 import numpy as np
 
 gripper_open_angle = 1.5  # rad
@@ -56,8 +57,9 @@ def VisualizePath(meshcat, plant, frame, traj, name):
         
         
 def KinematicTrajOpt(plant, real_plant_context, endowrist_model_instance_idx, frame_name, 
-                     wrist_joint_idx, X_Start, X_Goal, prev_open_close, acceptable_pos_err=0.001, 
-                     acceptable_angle_error=0.05, acceptable_vel_err=0.01) -> BsplineTrajectory: 
+                     wrist_joint_idx, X_Start, X_Goal, prev_open_close, additional_objectives=[], 
+                     acceptable_pos_err=0.001, acceptable_angle_error=0.05, 
+                     acceptable_vel_err=0.01, save_to_csv=True) -> BsplineTrajectory: 
     
     JOINT_MAX_ACCELS = 0.5  # rad/s^2
     
@@ -93,6 +95,10 @@ def KinematicTrajOpt(plant, real_plant_context, endowrist_model_instance_idx, fr
     control_points = trajopt.control_points()  # M-by-N matrix (M: positions, N: control points)
     for i in range(control_points.shape[1]):  # N control points
         prog.AddQuadraticCost(weight * (control_points[wrist_joint_idx, i] - (-0.4)) ** 2)  # Target wrist-to-endowrist angle: -0.4 radians
+    
+    # Add any additional objectives defined in high_level_plan.yaml
+    for objective in additional_objectives:
+        prog.AddCost(objective)
     
     trajopt.AddPositionBounds(
         plant.GetPositionLowerLimits(), plant.GetPositionUpperLimits()
@@ -197,6 +203,9 @@ def KinematicTrajOpt(plant, real_plant_context, endowrist_model_instance_idx, fr
         print("Kinematic Traj Opt succeeded.")
 
     final_traj = trajopt.ReconstructTrajectory(result)  # BSplineTrajectory
+    if save_to_csv:
+        filename = datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')
+        save_traj(final_traj, f"trajs/{filename}")
     return final_traj
 
 
