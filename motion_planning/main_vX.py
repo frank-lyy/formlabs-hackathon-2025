@@ -142,9 +142,9 @@ while True:
     print("GENERATING TRAJS")
     print(f"current pos: {plant.GetPositions(plant_context)}")
     trajL = KinematicTrajOpt(plant, plant_context, endowrist_left_model_instance_idx, "endowrist_forcep1", 
-                             left_wrist_joint_idx, X_Start_L, X_Goal_L, prev_open_close[0])
+                             left_wrist_joint_idx, X_Start_L, X_Goal_L, prev_open_close[0], L_R="L")
     trajR = KinematicTrajOpt(plant, plant_context, endowrist_right_model_instance_idx, "endowrist_forcep1", 
-                             right_wrist_joint_idx, X_Start_R, X_Goal_R, prev_open_close[1])
+                             right_wrist_joint_idx, X_Start_R, X_Goal_R, prev_open_close[1], L_R="R")
     VisualizePath(meshcat, plant, left_eef_frame, trajL, f"trajs/traj{action_idx}L")
     VisualizePath(meshcat, plant, right_eef_frame, trajR, f"trajs/traj{action_idx}R")
     

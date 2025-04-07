@@ -59,9 +59,10 @@ def VisualizePath(meshcat, plant, frame, traj, name):
 def KinematicTrajOpt(plant, real_plant_context, endowrist_model_instance_idx, frame_name, 
                      wrist_joint_idx, X_Start, X_Goal, prev_open_close, additional_objectives=[], 
                      acceptable_pos_err=0.001, acceptable_angle_error=0.05, 
-                     acceptable_vel_err=0.01, save_to_csv=True) -> BsplineTrajectory: 
+                     acceptable_vel_err=0.01, save_to_csv=True, L_R="L") -> BsplineTrajectory: 
     
-    JOINT_MAX_ACCELS = 0.5  # rad/s^2
+    # This is based on testing at 500 steps/sec^2 on robot's joint A (which works reliably)
+    JOINT_MAX_ACCELS = 3  # rad/s^2
     
     frame = plant.GetFrameByName(frame_name, endowrist_model_instance_idx)
     
@@ -87,6 +88,7 @@ def KinematicTrajOpt(plant, real_plant_context, endowrist_model_instance_idx, fr
     trajopt = KinematicTrajectoryOptimization(plant.num_positions(), 8)  # 8 control points in Bspline
     prog = trajopt.get_mutable_prog()
     
+    trajopt.AddPathEnergyCost(-0.5)
     trajopt.AddPathLengthCost(1.0)
     trajopt.AddDurationCost(1.0)
     
@@ -205,7 +207,7 @@ def KinematicTrajOpt(plant, real_plant_context, endowrist_model_instance_idx, fr
     final_traj = trajopt.ReconstructTrajectory(result)  # BSplineTrajectory
     if save_to_csv:
         filename = datetime.now().strftime('%Y-%m-%d_%H-%M-%S-%f')
-        save_traj(final_traj, f"trajs/{filename}")
+        save_traj(final_traj, L_R, f"trajs/{filename}_{L_R}")
     return final_traj
 
 
