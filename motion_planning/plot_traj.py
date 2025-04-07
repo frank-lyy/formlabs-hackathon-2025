@@ -74,8 +74,8 @@ def main():
     times = []
     
     # MANUALLY SPECIFY FILENAME
-    filename = "2025-04-07_01-27-41-521629_L.npz"
-    data = np.load(filename, allow_pickle=True)
+    filename = "2025-04-07_01-48-11-669558_L.npz"
+    data = np.load(f"trajs/{filename}", allow_pickle=True)
     
     # Grab first file with .npz extension
     # data = np.load([f for f in os.listdir() if f.endswith('.npz')][0], allow_pickle=True)

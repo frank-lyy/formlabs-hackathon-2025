@@ -63,6 +63,7 @@ def KinematicTrajOpt(plant, real_plant_context, endowrist_model_instance_idx, fr
     
     # This is based on testing at 500 steps/sec^2 on robot's joint A (which works reliably)
     JOINT_MAX_ACCELS = 3  # rad/s^2
+    JOINT_MAX_JERKS = 300  # rad/s^3
     
     frame = plant.GetFrameByName(frame_name, endowrist_model_instance_idx)
     
@@ -112,6 +113,9 @@ def KinematicTrajOpt(plant, real_plant_context, endowrist_model_instance_idx, fr
     trajopt.AddAccelerationBounds(
         -JOINT_MAX_ACCELS * np.ones(plant.num_positions()), JOINT_MAX_ACCELS * np.ones(plant.num_positions())
     )
+    trajopt.AddJerkBounds(
+        -JOINT_MAX_JERKS * np.ones(plant.num_positions()), JOINT_MAX_JERKS * np.ones(plant.num_positions())
+    )
     
     start_pos_constraint = PositionConstraint(
         plant,
@@ -156,6 +160,9 @@ def KinematicTrajOpt(plant, real_plant_context, endowrist_model_instance_idx, fr
     )
     trajopt.AddPathPositionConstraint(goal_pos_constraint, 1)
     trajopt.AddPathPositionConstraint(goal_orientation_constraint, 1)
+    
+    # Zero Initial joint velocity constraint
+    trajopt.AddPathVelocityConstraint(np.zeros(plant.num_positions()), np.zeros(plant.num_positions()), 0)
     
     # Zero final velocity constraint
     plant_autodiff = plant.ToAutoDiffXd()
