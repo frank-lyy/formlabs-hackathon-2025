@@ -154,7 +154,7 @@ simply not possible in real life / out of the domain of normal operation. -->
     <limit
       lower="-1.52"
       upper="1.52"
-      effort="15"
+      effort="50"
       velocity="1" />
   </joint>
   <link
@@ -212,7 +212,7 @@ simply not possible in real life / out of the domain of normal operation. -->
     <limit
       lower="-1.57"
       upper="1.57"
-      effort="15"
+      effort="50"
       velocity="2" />
   </joint>
   <link
@@ -269,8 +269,8 @@ simply not possible in real life / out of the domain of normal operation. -->
       xyz="0 0 1" />
     <limit
       lower="-0.7"
-      upper="-0.2"
-      effort="15"
+      upper="0.0"
+      effort="50"
       velocity="2" />
   </joint>
   <link
@@ -381,7 +381,7 @@ simply not possible in real life / out of the domain of normal operation. -->
     <limit
       lower="-1.52"
       upper="1.52"
-      effort="15"
+      effort="50"
       velocity="1" />
   </joint>
   <link
@@ -439,7 +439,7 @@ simply not possible in real life / out of the domain of normal operation. -->
     <limit
       lower="-1.57"
       upper="1.57"
-      effort="15"
+      effort="50"
       velocity="2" />
   </joint>
   <link
@@ -496,8 +496,8 @@ simply not possible in real life / out of the domain of normal operation. -->
       xyz="0 0 1" />
     <limit
       lower="-0.7"
-      upper="-0.2"
-      effort="15"
+      upper="0.0"
+      effort="50"
       velocity="2" />
   </joint>
   <link

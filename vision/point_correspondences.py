@@ -132,7 +132,7 @@ def track_state(source_pointcloud, target_pointcloud, visualize=False):
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         ax = normalize_plot(ordered_target_pointcloud, ax, three_d=True)
-        ax.scatter(ordered_target_pointcloud[:, 0], ordered_target_pointcloud[:, 1], ordered_target_pointcloud[:, 2], c=colors)
+        ax.scatter(ordered_target_pointcloud[:, 0], ordered_target_pointcloud[:, 1], ordered_target_pointcloud[:, 2], c=colors, s=5)
         plt.show()
 
     return ordered_target_pointcloud
@@ -141,7 +141,7 @@ def track_state(source_pointcloud, target_pointcloud, visualize=False):
 if __name__ == "__main__":
     cleaned_data = load_data("../data/data.json")
     cleaned_data = [remove_outliers(points, eps=0.01) for points in cleaned_data]
-    cleaned_data = [downsample_points(points, voxel_size=0.005) for points in cleaned_data]
+    cleaned_data = [downsample_points(points, voxel_size=0.005, kmeans=True, k=50) for points in cleaned_data]
     source_pointcloud, pointclouds = cleaned_data[0], cleaned_data[1:]
     source_pointcloud = initial_pointcloud_order(source_pointcloud, visualize=True)
     

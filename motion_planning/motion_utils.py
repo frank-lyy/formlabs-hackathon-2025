@@ -35,6 +35,68 @@ def diagram_visualize_connections(diagram: Diagram, file: Union[BinaryIO, str]) 
     file.write(svg_data)
     
 
+def save_traj(traj, L_R, filename, dt=0.01):
+    """
+    Create npz file with dense sampling of the trajectory, including dt.
+
+    traj: Trajectory
+    filename: str
+    dt: float, time step
+    
+    Note: unit conversions are done before passing trajectory to Arduino, to
+    minimize computation load on Arduino (for fastest control loops possible).
+    """
+    def convert_rad_to_steps(rad, a_or_b="a"):
+        """Convert radians (float) to steps (integer) for stepper motor"""
+        GEAR_RATIO_A = 50
+        GEAR_RATIO_B = 4
+        STEPS_PER_REVOLUTION = 200
+        
+        if a_or_b == "a":
+            return rad * GEAR_RATIO_A * STEPS_PER_REVOLUTION / (2 * np.pi)
+        elif a_or_b == "b":
+            return rad * GEAR_RATIO_B * STEPS_PER_REVOLUTION / (2 * np.pi)
+        
+    def convert_rad_to_01_deg(rad):
+        """Convert radians (float) to 0.01 degrees (integer)"""
+        return (rad * 18000 / np.pi).astype(int)
+        
+    def convert_units(vector):
+        """
+        Convert pos/vel/acc/jerk units:
+         - [0,1] to stepper motor steps (with respective gear ratios)
+         - [2:6] to 0.01 degrees
+        """
+        vector[0] = convert_rad_to_steps(vector[0], "a")
+        vector[1] = convert_rad_to_steps(vector[1], "b")
+        vector[2:] = convert_rad_to_01_deg(vector[2:])
+        return vector
+        
+    time_start = traj.start_time()
+    time_end = traj.end_time()
+
+    time_samples = np.arange(time_start, time_end, dt)
+    trajectory_data = []
+
+    if L_R == "L":
+        for t in time_samples:
+            pos = convert_units(traj.value(t)[:7])
+            vel = convert_units(traj.EvalDerivative(t, 1)[:7])
+            acc = convert_units(traj.EvalDerivative(t, 2)[:7])
+            jerk = convert_units(traj.EvalDerivative(t, 3)[:7])
+            trajectory_data.append([t] + list(pos) + list(vel) + list(acc) + list(jerk))  # Append time and state as a list
+    else:
+        for t in time_samples:
+            pos = convert_units(traj.value(t)[7:])
+            vel = convert_units(traj.EvalDerivative(t, 1)[7:])
+            acc = convert_units(traj.EvalDerivative(t, 2)[7:])
+            jerk = convert_units(traj.EvalDerivative(t, 3)[7:])
+            trajectory_data.append([t] + list(pos) + list(vel) + list(acc) + list(jerk))  # Append time and state as a list
+
+    trajectory_data = np.array(trajectory_data)
+    np.savez(filename, trajectory_data=trajectory_data, dt=dt)
+
+
 def ik(plant, frame, pose, rotation_offset=RotationMatrix(), translation_error=0, rotation_error=0.05, regions=None, pose_as_constraint=True) -> tuple[np.ndarray, bool]:
     """
     Use Inverse Kinematics to solve for a configuration that satisfies a
@@ -124,10 +186,10 @@ def get_left_right_joint_indices(plant, endowrist_left_model_instance_idx,
         "joint_arm_left_wrist_left",
         "joint_wrist_left_endowrist_left",
         # Endowrist joints for left arm
-        "joint_endowrist_box_endowrist_tube",
-        "joint_endowrist_tube_endowrist_body",
-        "joint_endowrist_body_endowrist_forcep1",
-        "joint_endowrist_body_endowrist_forcep2"
+        "joint_endowrist_box_endowrist_tube",  # Phi
+        "joint_endowrist_tube_endowrist_body",  # Theta
+        "joint_endowrist_body_endowrist_forcep1",  # Alpha
+        "joint_endowrist_body_endowrist_forcep2"  # Beta
     ]
 
     right_arm_joint_names = [
@@ -135,10 +197,10 @@ def get_left_right_joint_indices(plant, endowrist_left_model_instance_idx,
         "joint_arm_right_wrist_right",
         "joint_wrist_right_endowrist_right",
         # Endowrist joints for right arm
-        "joint_endowrist_box_endowrist_tube",
-        "joint_endowrist_tube_endowrist_body",
-        "joint_endowrist_body_endowrist_forcep1",
-        "joint_endowrist_body_endowrist_forcep2"
+        "joint_endowrist_box_endowrist_tube",  # Phi
+        "joint_endowrist_tube_endowrist_body",  # Theta
+        "joint_endowrist_body_endowrist_forcep1",  # Alpha
+        "joint_endowrist_body_endowrist_forcep2"  # Beta
     ]
 
     # Get indices for left arm joints

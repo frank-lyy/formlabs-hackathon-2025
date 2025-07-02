@@ -100,7 +100,7 @@ def main(stop_event):
     action_idx = 0
     prev_open_close = (0, 0)  # open
     while not stop_event.is_set():
-        X_Goal_L, X_Goal_R, open_close_L, open_close_R = high_level_planner.get_next_action()
+        X_Goal_L, X_Goal_R, open_close_L, open_close_R, additional_objectives = high_level_planner.get_next_action()
         if X_Goal_L is None:
             break
         
@@ -115,9 +115,9 @@ def main(stop_event):
         print("GENERATING TRAJS")
         print(f"current pos: {plant.GetPositions(plant_context)}")
         trajL = KinematicTrajOpt(plant, plant_context, endowrist_left_model_instance_idx, "endowrist_forcep1", 
-                                left_wrist_joint_idx, X_Start_L, X_Goal_L, prev_open_close[0])
+                                left_wrist_joint_idx, X_Start_L, X_Goal_L, prev_open_close[0], additional_objectives)
         trajR = KinematicTrajOpt(plant, plant_context, endowrist_right_model_instance_idx, "endowrist_forcep1", 
-                                right_wrist_joint_idx, X_Start_R, X_Goal_R, prev_open_close[1])
+                                right_wrist_joint_idx, X_Start_R, X_Goal_R, prev_open_close[1], additional_objectives)
         VisualizePath(meshcat, plant, left_eef_frame, trajL, f"trajs/traj{action_idx}L")
         VisualizePath(meshcat, plant, right_eef_frame, trajR, f"trajs/traj{action_idx}R")
         

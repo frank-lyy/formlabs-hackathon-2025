@@ -53,6 +53,8 @@ X_W_Cam = plant.CalcRelativeTransform(plant_context, plant.world_frame(), camera
 print(f"X_W_Cam: {X_W_Cam.translation()}, {X_W_Cam.rotation().matrix()}")
 
 FPS = 4
+NUM_CLUSTERS = 500
+USE_KMEANS = False
 record_data = True
 
 # Store data
@@ -60,7 +62,8 @@ class StringState:
     def __init__(self):
         self.orange_data = {}
         self.blue_data = {}
-        self.corners = np.array([(367, 269), (853, 264), (919, 598), (338, 577)]) 
+        #self.corners = np.array([(367, 269), (853, 264), (919, 598), (338, 577)]) 
+        self.corners = None
         self.orange_lock = threading.Lock()
         self.blue_lock = threading.Lock()
     
@@ -259,8 +262,9 @@ def main(stop_event):
         # Store data
         if time.time() - prev_time > 5 and record_data:
             prev_time = time.time()
-            cleaned_blue = clean_data(mask_blue, points, quad_mask, visualize=False)
-            cleaned_orange = clean_data(mask_orange, points, quad_mask, visualize=False)
+            mask_blue
+            cleaned_blue = clean_data(mask_blue, points, quad_mask, voxel_size=0.005, visualize=False, kmeans=USE_KMEANS, k=NUM_CLUSTERS)
+            cleaned_orange = clean_data(mask_orange, points, quad_mask, voxel_size=0.005, visualize=False, kmeans=USE_KMEANS, k=NUM_CLUSTERS)
             
             improved_mask_orange = improve_mask(mask_orange, quad_mask, visualize=False)
             improved_mask_blue = improve_mask(mask_blue, quad_mask, visualize=False)
@@ -296,8 +300,8 @@ def main(stop_event):
         # Store data
         if time.time() - prev_time > 1 / FPS and record_data:
             prev_time = time.time()
-            cleaned_blue = clean_data(mask_blue, points, quad_mask, visualize=False)
-            cleaned_orange = clean_data(mask_orange, points, quad_mask, visualize=False)
+            cleaned_blue = clean_data(mask_blue, points, quad_mask, voxel_size=0.005, visualize=False, kmeans=USE_KMEANS, k=NUM_CLUSTERS)
+            cleaned_orange = clean_data(mask_orange, points, quad_mask, voxel_size=0.005, visualize=False, kmeans=USE_KMEANS, k=NUM_CLUSTERS)
 
             improved_mask_orange = improve_mask(mask_orange, quad_mask, visualize=False)
             improved_mask_blue = improve_mask(mask_blue, quad_mask, visualize=False)
@@ -313,7 +317,7 @@ def main(stop_event):
             # data.append(relevant_depth.tolist())
             
 
-            if time.time() - prev_image_time > 10:
+            if time.time() - prev_image_time > 5:
                 prev_image_time = time.time()
                 new_orange_target_points = get_state(string_state.orange_data["source_points"], cleaned_orange, visualize=True)
                 new_blue_target_points = get_state(string_state.blue_data["source_points"], cleaned_blue, visualize=False)

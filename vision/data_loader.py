@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import cv2
 import json
 from pydrake.perception import PointCloud
-from sklearn.cluster import DBSCAN
+from sklearn.cluster import DBSCAN, KMeans
 
 from visualize_helpers import *
 
@@ -44,13 +44,16 @@ def improve_mask(mask, quad_mask, visualize=False):
     if visualize: visualize_mask(mask)
     return mask
 
-def downsample_points(points, voxel_size=0.005):
-    pc = PointCloud(points.shape[0])
-    mutable_xyzs = pc.mutable_xyzs()
-    mutable_xyzs[:] = points.T
-    downsampled_pc = pc.VoxelizedDownSample(voxel_size=voxel_size)
-    downsampled_points = downsampled_pc.xyzs().T
-        
+def downsample_points(points, voxel_size=0.005, kmeans=False, k=500):
+    if kmeans:
+        kmeans = KMeans(n_clusters=k, random_state=0, n_init="auto").fit(points)
+        downsampled_points = kmeans.cluster_centers_
+    else:
+        pc = PointCloud(points.shape[0])
+        mutable_xyzs = pc.mutable_xyzs()
+        mutable_xyzs[:] = points.T
+        downsampled_pc = pc.VoxelizedDownSample(voxel_size=voxel_size)
+        downsampled_points = downsampled_pc.xyzs().T
     return downsampled_points
 
 def remove_outliers(points, eps=None, min_samples=5):
@@ -92,15 +95,16 @@ def remove_outliers(points, eps=None, min_samples=5):
     # print(f"Removed {len(points) - len(filtered_points)} outlier points out of {len(points)} total points")
     return filtered_points
 
-def clean_data(mask, points, quad_mask, voxel_size=0.005, visualize=False):
+def clean_data(mask, points, quad_mask, voxel_size=0.005, visualize=False, kmeans=False, k=500):
     """ 
     takes in a single mask and pointcloud and returns a cleaned version
     pointclouds have been downsampled and (improved) masks have been applied
     """    
     mask = improve_mask(mask, quad_mask, visualize=visualize)
     masked_points = points[mask]
+    masked_points = masked_points[~np.isnan(masked_points).any(axis=1)]
     cleaned_points = remove_outliers(masked_points, eps=0.01)
-    downsampled_points = downsample_points(cleaned_points, voxel_size=voxel_size)
+    downsampled_points = downsample_points(cleaned_points, voxel_size=voxel_size, kmeans=kmeans, k=k)
         
     return downsampled_points
 

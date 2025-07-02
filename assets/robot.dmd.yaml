@@ -3,9 +3,9 @@ directives:
 - add_model:
     name: Robot.SLDASM
     file: package://assets/Robot.SLDASM/urdf/Robot.SLDASM.urdf
-    default_joint_positions:
-        joint_wrist_left_endowrist_left: [ -0.3 ]
-        joint_wrist_right_endowrist_right: [ -0.3 ]
+    # default_joint_positions:
+    #     joint_wrist_left_endowrist_left: [ -0.3 ]
+    #     joint_wrist_right_endowrist_right: [ -0.3 ]
 - add_weld:
     parent: world
     child: Robot.SLDASM::base_link
